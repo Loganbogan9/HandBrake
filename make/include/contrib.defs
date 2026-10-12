@@ -2,6 +2,11 @@ CONTRIB.build/    = $(BUILD/)contrib/
 CONTRIB.download/ = $(SRC/)download/
 CONTRIB.host      = $(if $(filter 1,$(HOST.cross)),$(HOST.spec))
 CONTRIB.spec      = $(if $(filter 1,$(HOST.cross)),$(BUILD.spec))
+ifeq (1,$(FEATURE.ios))
+    # Distinct from the macOS build tuple, even on an arm64 Mac. This keeps
+    # Autoconf from trying to execute a device binary during feature probes.
+    CONTRIB.host = $(HOST.arch)-apple-darwin
+endif
 
 ###############################################################################
 

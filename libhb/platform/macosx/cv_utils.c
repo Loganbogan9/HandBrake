@@ -197,7 +197,7 @@ CFStringRef hb_cv_colr_tra_xlat(int color_transfer)
         case HB_COLR_TRA_SMPTEST2084:
             return kCVImageBufferTransferFunction_SMPTE_ST_2084_PQ;
         case HB_COLR_TRA_LINEAR:
-            if (__builtin_available(macOS 10.14, *)) { return kCVImageBufferTransferFunction_Linear; }
+            if (__builtin_available(macOS 10.14, iOS 12, tvOS 12, *)) { return kCVImageBufferTransferFunction_Linear; }
         case HB_COLR_TRA_IEC61966_2_1:
             return kCVImageBufferTransferFunction_sRGB;
         case HB_COLR_TRA_ARIB_STD_B67:
@@ -327,7 +327,7 @@ int hb_cv_match_rgb_to_colorspace(int rgb,
     const unsigned g = (rgb >> 8) & 0xff;
     const unsigned b = (rgb) & 0xff;
 
-    if (__builtin_available(macOS 10.15, *)) {
+    if (__builtin_available(macOS 10.15, iOS 13, tvOS 13, *)) {
 
         CGColorRef rgb_color = CGColorCreateSRGB(r / 255.f, g / 255.f, b / 255.f, 1.f);
 
@@ -335,6 +335,19 @@ int hb_cv_match_rgb_to_colorspace(int rgb,
         CFStringRef transfer = CVTransferFunctionGetStringForIntegerCodePoint(color_transfer);
         CFNumberRef gamma    = hb_cv_colr_gamma_xlat(color_transfer);
         CFStringRef matrix   = CVYCbCrMatrixGetStringForIntegerCodePoint(color_matrix);
+
+        if (rgb_color == NULL || prim == NULL || transfer == NULL || matrix == NULL)
+        {
+            if (rgb_color != NULL)
+            {
+                CFRelease(rgb_color);
+            }
+            if (gamma != NULL)
+            {
+                CFRelease(gamma);
+            }
+            return rgb;
+        }
 
         CGColorSpaceRef colorspace = NULL;
         if (transfer == kCVImageBufferTransferFunction_UseGamma)
@@ -350,11 +363,15 @@ int hb_cv_match_rgb_to_colorspace(int rgb,
         else
         {
             const void *keys[3] = { kCVImageBufferColorPrimariesKey, kCVImageBufferTransferFunctionKey, kCVImageBufferYCbCrMatrixKey };
-            const void *values[3] = { prim, transfer, gamma };
+            const void *values[3] = { prim, transfer, matrix };
             CFDictionaryRef attachments = CFDictionaryCreate(NULL, keys, values, 3, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
 
             colorspace = CVImageBufferCreateColorSpaceFromAttachments(attachments);
             CFRelease(attachments);
+        }
+        if (gamma != NULL)
+        {
+            CFRelease(gamma);
         }
 
         if (colorspace == NULL)

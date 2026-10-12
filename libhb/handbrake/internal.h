@@ -285,7 +285,8 @@ hb_thread_t * hb_scan_init( hb_handle_t *, volatile int * die,
                             int crop_auto_switch_threshold, int crop_median_threshold,
                             hb_list_t * exclude_extensions, int hw_decode, int keep_duplicate_titles);
 hb_thread_t * hb_work_init( hb_list_t * jobs,
-                            volatile int * die, hb_error_code * error, hb_job_t ** job );
+                            volatile int * die, hb_error_code * error,
+                            hb_job_t ** job, hb_lock_t * current_job_lock );
 void ReadLoop( void * _w );
 void hb_work_loop( void * );
 hb_work_object_t * hb_muxer_init( hb_job_t * );

@@ -1,0 +1,42 @@
+--- a/meson.build
++++ b/meson.build
+@@ -13,6 +13,14 @@
+ 
+ libbluray_src_root = meson.current_source_dir()
+ cc = meson.get_compiler('c')
++# iOS has no optical devices or DiskArbitration. Keep directory/image reading.
++apple_mobile = host_machine.system() == 'darwin' and cc.compiles('''
++#include <TargetConditionals.h>
++#if !TARGET_OS_IPHONE
++#error Not an iOS target
++#endif
++int main(void) { return 0; }
++''', name: 'Apple mobile target')
+ fs = import('fs')
+ 
+ # Configuration data for config.h
+@@ -51,8 +59,11 @@
+ endif
+ 
+ if host_machine.system() == 'darwin'
+-    extra_dependencies += dependency('appleframeworks',
+-        modules: ['CoreFoundation', 'DiskArbitration'])
++    apple_modules = ['CoreFoundation']
++    if not apple_mobile
++        apple_modules += 'DiskArbitration'
++    endif
++    extra_dependencies += dependency('appleframeworks', modules: apple_modules)
+ elif host_machine.system() == 'netbsd'
+     test_args += '-D_NETBSD_SOURCE'
+ elif host_machine.system() == 'openbsd'
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -71,7 +71,7 @@
+         'file/dirs_darwin.c',
+         'file/dl_posix.c',
+         'file/file_posix.c',
+-        'file/mount_darwin.c',
++        apple_mobile ? 'file/mount.c' : 'file/mount_darwin.c',
+     )
+ else
+     libbluray_src += files(

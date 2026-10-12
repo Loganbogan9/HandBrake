@@ -16,6 +16,9 @@ $(LIBHB.m.o): $(BUILD/)%.o: $(SRC/)%.m
 	$(call LIBHB.GCC.C_O,$@,$<)
 
 $(LIBHB.metal.o): $(LIBHB.d)
+ifeq (1,$(FEATURE.ios))
+$(LIBHB.metal.o): $(BIN2C.exe)
+endif
 $(LIBHB.metal.o): | $(dir $(LIBHB.metal.o))
 $(LIBHB.metal.o): $(BUILD/)%.o: $(SRC/)%.metal
 	$(call LIBHB.METAL.C_O,$(patsubst %.o,%,$@),$<)

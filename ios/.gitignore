@@ -1,0 +1,10 @@
+/Artifacts/
+/.build/
+/.swiftpm/
+/xtool/
+/.sourcekit-lsp/
+/build/
+**/xcuserdata/
+**/IDEWorkspaceChecks.plist
+**/__pycache__/
+*.xcresult

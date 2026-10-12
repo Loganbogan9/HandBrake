@@ -14,32 +14,56 @@
 #include <VideoToolbox/VideoToolbox.h>
 #include <CoreMedia/CoreMedia.h>
 #include <CoreVideo/CoreVideo.h>
+#include <TargetConditionals.h>
+#include <dispatch/dispatch.h>
 
 #pragma mark - Availability
 
+int hb_vt_can_require_hardware(void)
+{
+#if TARGET_OS_OSX
+    return 1;
+#else
+    if (__builtin_available(iOS 17.4, tvOS 17.4, visionOS 1.1, *))
+    {
+        return 1;
+    }
+    return 0;
+#endif
+}
+
 static OSStatus encoder_properties(CMVideoCodecType codecType, CFStringRef *encoderIDOut, CFDictionaryRef *supportedPropertiesOut)
 {
-    const void *keys[1] = { kVTVideoEncoderSpecification_RequireHardwareAcceleratedVideoEncoder };
-    const void *values[1] = { kCFBooleanTrue };
-    CFDictionaryRef specification = CFDictionaryCreate(NULL, keys, values, 1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+    if (!hb_vt_can_require_hardware())
+    {
+        return kVTCouldNotFindVideoEncoderErr;
+    }
+    // Gate the weak-linked constant before loading it on iOS 17.0-17.3.
+    if (__builtin_available(macOS 10.9, iOS 17.4, tvOS 17.4, visionOS 1.1, *))
+    {
+        const void *keys[1] = { kVTVideoEncoderSpecification_RequireHardwareAcceleratedVideoEncoder };
+        const void *values[1] = { kCFBooleanTrue };
+        CFDictionaryRef specification = CFDictionaryCreate(NULL, keys, values, 1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
 
-    OSStatus err = VTCopySupportedPropertyDictionaryForEncoder(1920, 1080,
-                                                               codecType, specification,
-                                                               encoderIDOut,
-                                                               supportedPropertiesOut);
-    CFRelease(specification);
-    return err;
+        OSStatus err = VTCopySupportedPropertyDictionaryForEncoder(1920, 1080,
+                                                                   codecType, specification,
+                                                                   encoderIDOut,
+                                                                   supportedPropertiesOut);
+        CFRelease(specification);
+        return err;
+    }
+    return kVTCouldNotFindVideoEncoderErr;
 }
 
 static int is_hardware_encoder_available(CMVideoCodecType codecType, CFStringRef level)
 {
     Boolean found = false;
-    CFStringRef encoderIDOut;
-    CFDictionaryRef supportedPropertiesOut;
+    CFStringRef encoderIDOut = NULL;
+    CFDictionaryRef supportedPropertiesOut = NULL;
 
     OSStatus err = encoder_properties(codecType, &encoderIDOut, &supportedPropertiesOut);
 
-    if (err == noErr)
+    if (err == noErr && supportedPropertiesOut != NULL)
     {
         if (level != NULL)
         {
@@ -58,7 +82,13 @@ static int is_hardware_encoder_available(CMVideoCodecType codecType, CFStringRef
             found = true;
         }
 
+    }
+    if (encoderIDOut != NULL)
+    {
         CFRelease(encoderIDOut);
+    }
+    if (supportedPropertiesOut != NULL)
+    {
         CFRelease(supportedPropertiesOut);
     }
     return found;
@@ -93,7 +123,7 @@ int hb_vt_is_encoder_available(int encoder)
         {
             static dispatch_once_t onceToken;
             dispatch_once(&onceToken, ^{
-                if (__builtin_available (macOS 11, *))
+                if (__builtin_available (macOS 11, iOS 11, tvOS 11, *))
                 {
                     vt_h265_10bit_available = is_hardware_encoder_available(kCMVideoCodecType_HEVC, kVTProfileLevel_HEVC_Main10_AutoLevel);
                     vt_h265_422_10bit_available = is_hardware_encoder_available(kCMVideoCodecType_HEVC, CFSTR("HEVC_Main42210_AutoLevel"));
@@ -106,7 +136,13 @@ int hb_vt_is_encoder_available(int encoder)
             return vt_h265_10bit_available;
         }
         case HB_VCODEC_VT_PRORES:
+#if TARGET_OS_OSX
             return 1;
+#else
+            // The desktop encoder permits software ProRes. Advertise only a
+            // confirmed hardware encoder in the mobile port.
+            return is_hardware_encoder_available(kCMVideoCodecType_AppleProRes422, NULL);
+#endif
     }
     return 0;
 }
@@ -116,29 +152,23 @@ int hb_vt_is_encoder_available(int encoder)
 static int is_constant_quality_available(CMVideoCodecType codecType)
 {
 #if defined(__aarch64__)
-    if (__builtin_available (macOS 11, *))
+    if (__builtin_available (macOS 11, iOS 14, tvOS 14, *))
     {
-        CFStringRef encoderIDOut;
-        CFDictionaryRef supportedPropertiesOut;
+        CFDictionaryRef supportedPropertiesOut = NULL;
 
-        OSStatus err = encoder_properties(codecType, &encoderIDOut, &supportedPropertiesOut);
+        OSStatus err = encoder_properties(codecType, NULL, &supportedPropertiesOut);
 
-        if (err == noErr)
+        int supported = 0;
+        if (err == noErr && supportedPropertiesOut != NULL)
         {
-            Boolean keyExists;
-            CFBooleanRef value = kCFBooleanFalse;
-            keyExists = CFDictionaryGetValueIfPresent(supportedPropertiesOut,
-                                                      kVTCompressionPropertyKey_Quality,
-                                                      (const void **)&value);
-
-            CFRelease(encoderIDOut);
-            CFRelease(supportedPropertiesOut);
-
-            if (keyExists)
-            {
-                return 1;
-            }
+            supported = CFDictionaryContainsKey(supportedPropertiesOut,
+                                                 kVTCompressionPropertyKey_Quality);
         }
+        if (supportedPropertiesOut != NULL)
+        {
+            CFRelease(supportedPropertiesOut);
+        }
+        return supported;
     }
 #endif
     return 0;
@@ -175,6 +205,30 @@ int hb_vt_is_constant_quality_available(int encoder)
 
 int hb_vt_is_multipass_available(int encoder)
 {
+#if !TARGET_OS_OSX
+    CMVideoCodecType codecType;
+    switch (encoder)
+    {
+        case HB_VCODEC_VT_H264:
+            codecType = kCMVideoCodecType_H264;
+            break;
+        case HB_VCODEC_VT_H265:
+        case HB_VCODEC_VT_H265_10BIT:
+            codecType = kCMVideoCodecType_HEVC;
+            break;
+        default:
+            return 0;
+    }
+    CFDictionaryRef properties = NULL;
+    OSStatus err = encoder_properties(codecType, NULL, &properties);
+    int available = err == noErr && properties != NULL &&
+                    CFDictionaryContainsKey(properties, kVTCompressionPropertyKey_MultiPassStorage);
+    if (properties != NULL)
+    {
+        CFRelease(properties);
+    }
+    return available;
+#else
     switch (encoder)
     {
         case HB_VCODEC_VT_H264:
@@ -194,7 +248,7 @@ int hb_vt_is_multipass_available(int encoder)
         }
     }
     return 0;
-
+#endif
 }
 
 #pragma mark - Settings

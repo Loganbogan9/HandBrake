@@ -1,0 +1,23 @@
+# Included after contrib module definitions so these targeted overrides win.
+# Compiler wrappers carry the iOS clang target through Autoconf and assembler
+# invocations; CMake/Meson also need an explicit cross-platform description.
+LIBHB.GCC.args.extra += -fblocks -fno-objc-arc
+
+define ios.CMAKE
+    $(1).CONFIGURE.host =
+    $(1).CONFIGURE.build =
+    $(1).CONFIGURE.extra += -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_TOOLCHAIN_FILE="$$(IOS.cmake_toolchain)"
+endef
+$(foreach n,HARFBUZZ LIBJPEGTURBO SVT-AV1 X265_8 X265_10 X265_12,$(eval $(call ios.CMAKE,$(n))))
+LIBJPEGTURBO.CONFIGURE.extra += -DWITH_TOOLS=OFF -DWITH_TESTS=OFF
+
+$(foreach n,LIBDAV1D LIBDVDREAD LIBDVDNAV LIBBLURAY,$(eval $(n).CONFIGURE.extra += --cross-file=$(IOS.meson_cross)))
+
+# Use the portable libvpx/x264 paths for the initial port. They retain the
+# software codecs without libvpx's macOS SDK auto-detection and host executables.
+LIBVPX.CONFIGURE.extra += --target=generic-gnu --disable-asm --enable-pic
+X264.CONFIGURE.extra += --disable-asm --enable-pic
+
+# FFmpeg's Darwin target is also correct for iOS. Disable probes for frameworks
+# which are available only on macOS; public VideoToolbox decode stays enabled.
+FFMPEG.CONFIGURE.extra += --target-os=darwin --disable-securetransport --disable-appkit

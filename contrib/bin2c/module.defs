@@ -5,6 +5,12 @@ BIN2C.src/ = $(SRC/)contrib/bin2c/
 BIN2C.build/ = $(BUILD/)contrib/bin2c/
 BIN2C.GCC.archs = $(BUILD.machine)
 BIN2C.GCC.args.extra =
+ifeq (1,$(FEATURE.ios))
+    # This program runs on the build Mac, not on the iPhone or simulator.
+    BIN2C.GCC.gcc = $(IOS.host_cc)
+    BIN2C.GCC.sysroot =
+    BIN2C.GCC.minver =
+endif
 
 BIN2C.c   = $(wildcard $(BIN2C.src/)*.c)
 BIN2C.c.o = $(patsubst $(SRC/)%.c,$(BUILD/)%.o,$(BIN2C.c))

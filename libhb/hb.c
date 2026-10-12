@@ -2013,7 +2013,8 @@ void hb_start( hb_handle_t * h )
     h->pause_duration = 0;
     h->work_die       = 0;
     h->work_error     = HB_ERROR_NONE;
-    h->work_thread    = hb_work_init( h->jobs, &h->work_die, &h->work_error, &h->current_job );
+    h->work_thread    = hb_work_init( h->jobs, &h->work_die, &h->work_error,
+                                    &h->current_job, h->state_lock );
 }
 
 /**
@@ -2045,14 +2046,23 @@ void hb_resume( hb_handle_t * h )
     {
         if (h->pause_date != -1)
         {
+            hb_lock(h->state_lock);
+            int64_t paused = hb_get_date() - h->pause_date;
             // Calculate paused time for current job sequence
-            h->pause_duration    += hb_get_date() - h->pause_date;
+            h->pause_duration    += paused;
 
             // Calculate paused time for current job pass
             // Required to calculate accurate ETA for pass
-            h->current_job->st_paused += hb_get_date() - h->pause_date;
+            // JSON pre-scan and completed work have no current encoding pass.
+            // The worker changes/clears this pointer under the same lock before
+            // freeing a pass, so the statistics update cannot race its lifetime.
+            if (h->current_job != NULL)
+            {
+                h->current_job->st_paused += paused;
+            }
             h->pause_date              = -1;
             h->state.param.working.paused = h->pause_duration;
+            hb_unlock(h->state_lock);
         }
 
         hb_unlock( h->pause_lock );

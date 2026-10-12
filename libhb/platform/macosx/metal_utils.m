@@ -27,6 +27,7 @@ hb_metal_context_t * hb_metal_context_init(const char *metallib_data,
 
     NSError *err = nil;
 
+#if TARGET_OS_OSX
     NSArray<id<MTLDevice>> *devices = MTLCopyAllDevices();
     ctx->device = [devices.lastObject retain];
     for (id<MTLDevice> device in devices)
@@ -38,13 +39,16 @@ hb_metal_context_t * hb_metal_context_init(const char *metallib_data,
         }
     }
     [devices release];
+#else
+    ctx->device = MTLCreateSystemDefaultDevice();
+#endif
     if (!ctx->device)
     {
         hb_error("metal: unable to find Metal device");
         goto fail;
     }
 
-    if (@available(macOS 10.14, *))
+    if (@available(macOS 10.14, iOS 12, tvOS 12, *))
     {
         NSUInteger maxBufferLength = ctx->device.maxBufferLength;
         NSUInteger textureSize = width * height * sizeof(float);
@@ -196,7 +200,7 @@ void hb_metal_compute_encoder_dispatch(id<MTLDevice> device,
     MTLSize threadsPerThreadgroup = MTLSizeMake(w, h, 1);
     BOOL fallback = YES;
 
-    if (@available(macOS 10.15, iOS 11, tvOS 14.5, *))
+    if (@available(macOS 10.15, iOS 13, tvOS 14.5, *))
     {
         if ([device supportsFamily:MTLGPUFamilyCommon3])
         {

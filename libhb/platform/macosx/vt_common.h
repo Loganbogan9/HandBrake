@@ -9,6 +9,8 @@
 
 #include "handbrake/handbrake.h"
 
+// Hardware encoder selection is public on iOS starting with 17.4.
+int hb_vt_can_require_hardware(void);
 int hb_vt_is_encoder_available(int encoder);
 int hb_vt_is_constant_quality_available(int encoder);
 int hb_vt_is_multipass_available(int encoder);

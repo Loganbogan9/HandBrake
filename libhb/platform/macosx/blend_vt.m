@@ -150,7 +150,7 @@ static int hb_blend_vt_init(hb_blend_object_t *object,
         descriptor.width       = width;
         descriptor.height      = height;
         descriptor.depth       = 1;
-        descriptor.storageMode = MTLStorageModeManaged;
+        descriptor.storageMode = HB_METAL_STORAGE_MODE_CPU;
         descriptor.usage       = MTLTextureUsageShaderRead;
 
         pv->overlays[pp] = [pv->mtl->device newTextureWithDescriptor:descriptor];
@@ -160,7 +160,7 @@ static int hb_blend_vt_init(hb_blend_object_t *object,
 
     NSUInteger length = 4 * 2 * sizeof(uint32_t);
     pv->chroma_coeffs = [pv->mtl->device newBufferWithLength:length
-                                                     options:MTLResourceStorageModeManaged];
+                                                     options:HB_METAL_RESOURCE_MODE_CPU];
     if (pv->chroma_coeffs == nil)
     {
         hb_error("blend_vt: failed to create Metal buffers");
@@ -169,7 +169,7 @@ static int hb_blend_vt_init(hb_blend_object_t *object,
     hb_compute_chroma_smoothing_coefficient(pv->chroma_coeffs.contents,
                                             in_pix_fmt,
                                             in_chroma_location);
-    [pv->chroma_coeffs didModifyRange:NSMakeRange(0, length)];
+    hb_metal_buffer_did_modify(pv->chroma_coeffs, NSMakeRange(0, length));
 
     return 0;
 }

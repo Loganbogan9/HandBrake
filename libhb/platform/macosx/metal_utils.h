@@ -12,7 +12,27 @@
 
 #include <Metal/Metal.h>
 #include <CoreVideo/CoreVideo.h>
+#include <TargetConditionals.h>
 #include "libavutil/avutil.h"
+
+// Managed resources are only available on macOS. iOS has shared CPU/GPU memory.
+#if TARGET_OS_OSX
+#define HB_METAL_STORAGE_MODE_CPU MTLStorageModeManaged
+#define HB_METAL_RESOURCE_MODE_CPU MTLResourceStorageModeManaged
+#else
+#define HB_METAL_STORAGE_MODE_CPU MTLStorageModeShared
+#define HB_METAL_RESOURCE_MODE_CPU MTLResourceStorageModeShared
+#endif
+
+static inline void hb_metal_buffer_did_modify(id<MTLBuffer> buffer, NSRange range)
+{
+#if TARGET_OS_OSX
+    [buffer didModifyRange:range];
+#else
+    (void)buffer;
+    (void)range;
+#endif
+}
 
 struct hb_metal_context_s
 {

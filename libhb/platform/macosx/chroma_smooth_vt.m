@@ -171,9 +171,9 @@ static int chroma_smooth_vt_init(hb_filter_object_t *filter,
 
         const NSUInteger length = CHROMA_SMOOTH_SIZE_MAX * sizeof(float);
         ctx->coef_x = [pv->mtl->device newBufferWithLength:length
-                                                     options:MTLResourceStorageModeManaged];
+                                                     options:HB_METAL_RESOURCE_MODE_CPU];
         ctx->coef_y = [pv->mtl->device newBufferWithLength:length
-                                                     options:MTLResourceStorageModeManaged];
+                                                     options:HB_METAL_RESOURCE_MODE_CPU];
 
         float *blur_x = ctx->coef_x.contents;
         float *blur_y = ctx->coef_y.contents;
@@ -200,12 +200,12 @@ static int chroma_smooth_vt_init(hb_filter_object_t *filter,
             blur_y[y] /= sum;
         }
 
-        [ctx->coef_x didModifyRange:NSMakeRange(0, length)];
-        [ctx->coef_y didModifyRange:NSMakeRange(0, length)];
+        hb_metal_buffer_did_modify(ctx->coef_x, NSMakeRange(0, length));
+        hb_metal_buffer_did_modify(ctx->coef_y, NSMakeRange(0, length));
 
         NSUInteger matrix_length = ctx->size * ctx->size * sizeof(float);
         ctx->matrix = [pv->mtl->device newBufferWithLength:matrix_length
-                                                   options:MTLResourceStorageModeManaged];
+                                                   options:HB_METAL_RESOURCE_MODE_CPU];
 
         float *matrix = ctx->matrix.contents;
         for (int y = 0; y < ctx->size; y++)
@@ -217,7 +217,7 @@ static int chroma_smooth_vt_init(hb_filter_object_t *filter,
             }
         }
 
-        [ctx->matrix didModifyRange:NSMakeRange(0, matrix_length)];
+        hb_metal_buffer_did_modify(ctx->matrix, NSMakeRange(0, matrix_length));
     }
 
     pv->output = *init;

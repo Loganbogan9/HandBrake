@@ -32,7 +32,9 @@ else
 endif
 
 ifeq (darwin,$(HOST.system))
+    ifneq (1,$(FEATURE.ios))
         LIBBLURAY.CONFIGURE.extra += --cross-file=$(call fn.ABSOLUTE,$(SRC/))make/cross/$(HOST.machine)-darwin-gcc.meson
+    endif
 endif
 
 ifeq (1-mingw,$(HOST.cross)-$(HOST.system))

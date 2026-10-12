@@ -234,7 +234,7 @@ static int comb_detect_vt_init(hb_filter_object_t *filter,
         return -1;
     }
     char *check_combing_name = pv->mode & MODE_FILTER ? "check_filtered_combing_mask" : "check_combing_mask";
-    if (@available(macOS 13, *))
+    if (@available(macOS 13, iOS 16, tvOS 16, *))
     {
         if ([pv->mtl->device supportsFamily:MTLGPUFamilyMetal3] &&
             ((pv->block_width == 16 && pv->block_height == 16) || (pv->block_width == 32 && pv->block_height == 32)))

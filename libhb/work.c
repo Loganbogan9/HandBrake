@@ -28,6 +28,7 @@ typedef struct
 {
     hb_list_t * jobs;
     hb_job_t  ** current_job;
+    hb_lock_t  * current_job_lock;
     hb_error_code * error;
     volatile int * die;
 
@@ -52,12 +53,15 @@ static void filter_loop( void * );
  * @param die Handle to user initiated exit indicator.
  * @param error Handle to error indicator.
  */
-hb_thread_t * hb_work_init( hb_list_t * jobs, volatile int * die, hb_error_code * error, hb_job_t ** job )
+hb_thread_t * hb_work_init( hb_list_t * jobs, volatile int * die,
+                           hb_error_code * error, hb_job_t ** job,
+                           hb_lock_t * current_job_lock )
 {
     hb_work_t * work = calloc( sizeof( hb_work_t ), 1 );
 
     work->jobs      = jobs;
     work->current_job = job;
+    work->current_job_lock = current_job_lock;
     work->die       = die;
     work->error     = error;
 
@@ -159,12 +163,17 @@ static void work_func( void * _work )
             job = hb_list_item(passes, pass);
             job->die = work->die;
             job->done_error = work->error;
+            hb_lock(work->current_job_lock);
             *(work->current_job) = job;
+            hb_unlock(work->current_job_lock);
             InitWorkState(job, pass + 1, pass_count);
             do_job( job );
         }
         SetWorkStateInfo(job);
+        // Stop control readers from retaining a pointer to a pass being freed.
+        hb_lock(work->current_job_lock);
         *(work->current_job) = NULL;
+        hb_unlock(work->current_job_lock);
 
         // Clean job passes
         for (pass = 0; pass < pass_count; pass++)

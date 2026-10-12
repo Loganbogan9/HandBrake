@@ -1,0 +1,332 @@
+// !$*UTF8*$!
+{
+    archiveVersion = 1;
+    classes = {};
+    objectVersion = 56;
+    objects = {
+
+/* Begin PBXBuildFile section */
+        A10000000000000000000001 = {isa = PBXBuildFile; fileRef = A20000000000000000000001; };
+        A10000000000000000000002 = {isa = PBXBuildFile; fileRef = A20000000000000000000002; };
+        A10000000000000000000003 = {isa = PBXBuildFile; fileRef = A20000000000000000000003; };
+        A10000000000000000000004 = {isa = PBXBuildFile; fileRef = A20000000000000000000004; };
+        A10000000000000000000005 = {isa = PBXBuildFile; fileRef = A20000000000000000000005; };
+        A10000000000000000000006 = {isa = PBXBuildFile; fileRef = A20000000000000000000006; };
+        A10000000000000000000007 = {isa = PBXBuildFile; fileRef = A20000000000000000000007; };
+        A10000000000000000000008 = {isa = PBXBuildFile; fileRef = A20000000000000000000008; };
+        A10000000000000000000009 = {isa = PBXBuildFile; fileRef = A20000000000000000000009; };
+        A1000000000000000000000A = {isa = PBXBuildFile; fileRef = A2000000000000000000000A; };
+        A1000000000000000000000B = {isa = PBXBuildFile; fileRef = A2000000000000000000000B; };
+        A10000000000000000000010 = {isa = PBXBuildFile; fileRef = A20000000000000000000010; };
+        A10000000000000000000011 = {isa = PBXBuildFile; fileRef = A20000000000000000000011; };
+        A10000000000000000000012 = {isa = PBXBuildFile; fileRef = A20000000000000000000012; };
+        A10000000000000000000013 = {isa = PBXBuildFile; fileRef = A20000000000000000000013; };
+        A10000000000000000000014 = {isa = PBXBuildFile; fileRef = A20000000000000000000014; };
+        A10000000000000000000015 = {isa = PBXBuildFile; fileRef = A20000000000000000000015; };
+        A10000000000000000000016 = {isa = PBXBuildFile; fileRef = A20000000000000000000016; };
+        A10000000000000000000017 = {isa = PBXBuildFile; fileRef = A20000000000000000000017; };
+        A10000000000000000000018 = {isa = PBXBuildFile; fileRef = A20000000000000000000018; };
+        A10000000000000000000019 = {isa = PBXBuildFile; fileRef = A20000000000000000000019; };
+        A1000000000000000000001A = {isa = PBXBuildFile; fileRef = A2000000000000000000001A; };
+        A1000000000000000000001C = {isa = PBXBuildFile; fileRef = A2000000000000000000001C; };
+        A1000000000000000000001D = {isa = PBXBuildFile; fileRef = A2000000000000000000001D; };
+        A1000000000000000000001E = {isa = PBXBuildFile; fileRef = A2000000000000000000001E; };
+        A1000000000000000000001F = {isa = PBXBuildFile; fileRef = A2000000000000000000001F; };
+        A10000000000000000000021 = {isa = PBXBuildFile; fileRef = A20000000000000000000021; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+        A30000000000000000000001 = {
+            isa = PBXContainerItemProxy;
+            containerPortal = A60000000000000000000001;
+            proxyType = 1;
+            remoteGlobalIDString = A50000000000000000000001;
+            remoteInfo = HandBrakeIOS;
+        };
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+        A20000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandBrakeApp.swift; sourceTree = "<group>"; };
+        A20000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+        A20000000000000000000003 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueueView.swift; sourceTree = "<group>"; };
+        A20000000000000000000004 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutputsView.swift; sourceTree = "<group>"; };
+        A20000000000000000000005 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileExportPicker.swift; sourceTree = "<group>"; };
+        A20000000000000000000006 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaFormatting.swift; sourceTree = "<group>"; };
+        A20000000000000000000007 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandBrakeModel.swift; sourceTree = "<group>"; };
+        A20000000000000000000008 = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = HBEngine.mm; sourceTree = "<group>"; };
+        A20000000000000000000009 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HBEngineTests.swift; sourceTree = "<group>"; };
+        A2000000000000000000000A = {isa = PBXFileReference; lastKnownFileType = file; path = Fixtures/sample.mp4; sourceTree = "<group>"; };
+        A2000000000000000000000B = {isa = PBXFileReference; lastKnownFileType = text; name = COPYING; path = ../COPYING; sourceTree = "<group>"; };
+        A2000000000000000000000C = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HBEngine.h; sourceTree = "<group>"; };
+        A2000000000000000000000D = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HandBrakeIOS-Bridging-Header.h; sourceTree = "<group>"; };
+        A2000000000000000000000E = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+        A2000000000000000000000F = {isa = PBXFileReference; explicitFileType = wrapper.application; path = HandBrakeIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+        A20000000000000000000010 = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = HandBrakeEngine.xcframework; path = Artifacts/HandBrakeEngine.xcframework; sourceTree = "<group>"; };
+        A20000000000000000000011 = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+        A20000000000000000000012 = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVKit.framework; path = System/Library/Frameworks/AVKit.framework; sourceTree = SDKROOT; };
+        A20000000000000000000013 = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VideoToolbox.framework; path = System/Library/Frameworks/VideoToolbox.framework; sourceTree = SDKROOT; };
+        A20000000000000000000014 = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
+        A20000000000000000000015 = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreVideo.framework; path = System/Library/Frameworks/CoreVideo.framework; sourceTree = SDKROOT; };
+        A20000000000000000000016 = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
+        A20000000000000000000017 = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
+        A20000000000000000000018 = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+        A20000000000000000000019 = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOSurface.framework; path = System/Library/Frameworks/IOSurface.framework; sourceTree = SDKROOT; };
+        A2000000000000000000001A = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+        A2000000000000000000001B = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = HandBrakeIOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+        A2000000000000000000001C = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
+        A2000000000000000000001D = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
+        A2000000000000000000001E = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreText.framework; path = System/Library/Frameworks/CoreText.framework; sourceTree = SDKROOT; };
+        A2000000000000000000001F = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+        A20000000000000000000020 = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HBJobPolicy.h; sourceTree = "<group>"; };
+        A20000000000000000000021 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelTests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+        A40000000000000000000001 = {
+            isa = PBXFrameworksBuildPhase;
+            buildActionMask = 2147483647;
+            files = (A10000000000000000000010, A10000000000000000000011, A10000000000000000000012, A10000000000000000000013, A10000000000000000000014, A10000000000000000000015, A10000000000000000000016, A10000000000000000000017, A10000000000000000000018, A10000000000000000000019, A1000000000000000000001A, A1000000000000000000001C, A1000000000000000000001D, A1000000000000000000001E, A1000000000000000000001F, );
+            runOnlyForDeploymentPostprocessing = 0;
+        };
+        A40000000000000000000002 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+        A70000000000000000000001 = {
+            isa = PBXGroup;
+            children = (A70000000000000000000002, A70000000000000000000003, A70000000000000000000004, A70000000000000000000005, A70000000000000000000006, A2000000000000000000000E, A2000000000000000000000B, A70000000000000000000007, );
+            sourceTree = "<group>";
+        };
+        A70000000000000000000002 = {isa = PBXGroup; children = (A20000000000000000000001, A20000000000000000000002, A20000000000000000000003, A20000000000000000000004, A20000000000000000000005, A20000000000000000000006, ); path = App; sourceTree = "<group>"; };
+        A70000000000000000000003 = {isa = PBXGroup; children = (A20000000000000000000007, ); path = Core; sourceTree = "<group>"; };
+        A70000000000000000000004 = {isa = PBXGroup; children = (A20000000000000000000008, A2000000000000000000000C, A2000000000000000000000D, A20000000000000000000020, ); path = Bridge; sourceTree = "<group>"; };
+        A70000000000000000000005 = {isa = PBXGroup; children = (A20000000000000000000009, A20000000000000000000021, A2000000000000000000000A, ); path = Tests; sourceTree = "<group>"; };
+        A70000000000000000000006 = {isa = PBXGroup; children = (A20000000000000000000010, A20000000000000000000011, A20000000000000000000012, A20000000000000000000013, A20000000000000000000014, A20000000000000000000015, A20000000000000000000016, A20000000000000000000017, A20000000000000000000018, A20000000000000000000019, A2000000000000000000001A, A2000000000000000000001C, A2000000000000000000001D, A2000000000000000000001E, A2000000000000000000001F, ); name = Frameworks; sourceTree = "<group>"; };
+        A70000000000000000000007 = {isa = PBXGroup; children = (A2000000000000000000000F, A2000000000000000000001B, ); name = Products; sourceTree = "<group>"; };
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+        A50000000000000000000001 = {
+            isa = PBXNativeTarget;
+            buildConfigurationList = AA0000000000000000000002;
+            buildPhases = (A80000000000000000000001, A90000000000000000000001, A40000000000000000000001, AB0000000000000000000001, A80000000000000000000002, );
+            buildRules = ();
+            dependencies = ();
+            name = HandBrakeIOS;
+            productName = HandBrakeIOS;
+            productReference = A2000000000000000000000F;
+            productType = "com.apple.product-type.application";
+        };
+        A50000000000000000000002 = {
+            isa = PBXNativeTarget;
+            buildConfigurationList = AA0000000000000000000003;
+            buildPhases = (A90000000000000000000002, A40000000000000000000002, AB0000000000000000000002, );
+            buildRules = ();
+            dependencies = (AC0000000000000000000001, );
+            name = HandBrakeIOSTests;
+            productName = HandBrakeIOSTests;
+            productReference = A2000000000000000000001B;
+            productType = "com.apple.product-type.bundle.unit-test";
+        };
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+        A60000000000000000000001 = {
+            isa = PBXProject;
+            attributes = {
+                BuildIndependentTargetsInParallel = YES;
+                LastUpgradeCheck = 1600;
+                TargetAttributes = {
+                    A50000000000000000000001 = {CreatedOnToolsVersion = 16.0; };
+                    A50000000000000000000002 = {CreatedOnToolsVersion = 16.0; TestTargetID = A50000000000000000000001; };
+                };
+            };
+            buildConfigurationList = AA0000000000000000000001;
+            compatibilityVersion = "Xcode 14.0";
+            developmentRegion = en;
+            hasScannedForEncodings = 0;
+            knownRegions = (en, Base, );
+            mainGroup = A70000000000000000000001;
+            productRefGroup = A70000000000000000000007;
+            projectDirPath = "";
+            projectRoot = "";
+            targets = (A50000000000000000000001, A50000000000000000000002, );
+        };
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+        AB0000000000000000000001 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A1000000000000000000000B, ); runOnlyForDeploymentPostprocessing = 0; };
+        AB0000000000000000000002 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A1000000000000000000000A, ); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+        A80000000000000000000001 = {
+            isa = PBXShellScriptBuildPhase;
+            buildActionMask = 2147483647;
+            files = ();
+            inputPaths = ("$(SRCROOT)/Artifacts/HandBrakeEngine.xcframework/Info.plist", );
+            name = "Verify native engine artifact";
+            outputPaths = ();
+            runOnlyForDeploymentPostprocessing = 0;
+            shellPath = /bin/sh;
+            shellScript = "if [ ! -f \"${SRCROOT}/Artifacts/HandBrakeEngine.xcframework/Info.plist\" ]; then\n  echo \"error: Build the native engine first from the repository root: python3 ios/scripts/build-engine.py\"\n  exit 1\nfi\n";
+        };
+        A80000000000000000000002 = {
+            isa = PBXShellScriptBuildPhase;
+            buildActionMask = 2147483647;
+            files = ();
+            inputPaths = ("$(SRCROOT)/Artifacts/HandBrakeEngine-Licenses", );
+            name = "Copy engine license notices";
+            outputPaths = ("$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/EngineLicenses", );
+            runOnlyForDeploymentPostprocessing = 0;
+            shellPath = /bin/sh;
+            shellScript = "if [ ! -d \"${SRCROOT}/Artifacts/HandBrakeEngine-Licenses\" ]; then\n  echo \"error: Native engine license notices are missing. Run python3 ios/scripts/build-engine.py from the repository root.\"\n  exit 1\nfi\n/usr/bin/ditto \"${SRCROOT}/Artifacts/HandBrakeEngine-Licenses\" \"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/EngineLicenses\"\n";
+        };
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+        A90000000000000000000001 = {
+            isa = PBXSourcesBuildPhase;
+            buildActionMask = 2147483647;
+            files = (A10000000000000000000001, A10000000000000000000002, A10000000000000000000003, A10000000000000000000004, A10000000000000000000005, A10000000000000000000006, A10000000000000000000007, A10000000000000000000008, );
+            runOnlyForDeploymentPostprocessing = 0;
+        };
+        A90000000000000000000002 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000009, A10000000000000000000021, ); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+        AC0000000000000000000001 = {isa = PBXTargetDependency; target = A50000000000000000000001; targetProxy = A30000000000000000000001; };
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+        AD0000000000000000000001 = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+                CLANG_ENABLE_MODULES = YES;
+                CLANG_ENABLE_OBJC_ARC = YES;
+                CLANG_WARN_BOOL_CONVERSION = YES;
+                CLANG_WARN_CONSTANT_CONVERSION = YES;
+                CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+                CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+                CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+                COPY_PHASE_STRIP = NO;
+                DEBUG_INFORMATION_FORMAT = dwarf;
+                ENABLE_TESTABILITY = YES;
+                GCC_OPTIMIZATION_LEVEL = 0;
+                GCC_PREPROCESSOR_DEFINITIONS = ("DEBUG=1", "$(inherited)", );
+                IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+                ONLY_ACTIVE_ARCH = YES;
+                SDKROOT = iphoneos;
+                SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+                SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+            };
+            name = Debug;
+        };
+        AD0000000000000000000002 = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+                CLANG_ENABLE_MODULES = YES;
+                CLANG_ENABLE_OBJC_ARC = YES;
+                COPY_PHASE_STRIP = NO;
+                DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+                ENABLE_NS_ASSERTIONS = NO;
+                IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+                SDKROOT = iphoneos;
+                SWIFT_COMPILATION_MODE = wholemodule;
+                SWIFT_OPTIMIZATION_LEVEL = "-O";
+                VALIDATE_PRODUCT = YES;
+            };
+            name = Release;
+        };
+        AD0000000000000000000003 = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                CODE_SIGN_STYLE = Automatic;
+                CURRENT_PROJECT_VERSION = 1;
+                ENABLE_USER_SCRIPT_SANDBOXING = NO;
+                GENERATE_INFOPLIST_FILE = NO;
+                HEADER_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/Bridge", );
+                INFOPLIST_FILE = Info.plist;
+                LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", );
+                MARKETING_VERSION = 1.11.2;
+                OTHER_LDFLAGS = ("$(inherited)", "-lc++", "-lz", "-lbz2", "-liconv", );
+                PRODUCT_BUNDLE_IDENTIFIER = fr.handbrake.ios;
+                PRODUCT_NAME = "$(TARGET_NAME)";
+                SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+                SUPPORTS_MACCATALYST = NO;
+                SWIFT_OBJC_BRIDGING_HEADER = "Bridge/HandBrakeIOS-Bridging-Header.h";
+                SWIFT_VERSION = 5.0;
+                TARGETED_DEVICE_FAMILY = "1,2";
+            };
+            name = Debug;
+        };
+        AD0000000000000000000004 = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                CODE_SIGN_STYLE = Automatic;
+                CURRENT_PROJECT_VERSION = 1;
+                ENABLE_USER_SCRIPT_SANDBOXING = NO;
+                GENERATE_INFOPLIST_FILE = NO;
+                HEADER_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/Bridge", );
+                INFOPLIST_FILE = Info.plist;
+                LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", );
+                MARKETING_VERSION = 1.11.2;
+                OTHER_LDFLAGS = ("$(inherited)", "-lc++", "-lz", "-lbz2", "-liconv", );
+                PRODUCT_BUNDLE_IDENTIFIER = fr.handbrake.ios;
+                PRODUCT_NAME = "$(TARGET_NAME)";
+                SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+                SUPPORTS_MACCATALYST = NO;
+                SWIFT_OBJC_BRIDGING_HEADER = "Bridge/HandBrakeIOS-Bridging-Header.h";
+                SWIFT_VERSION = 5.0;
+                TARGETED_DEVICE_FAMILY = "1,2";
+            };
+            name = Release;
+        };
+        AD0000000000000000000005 = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                BUNDLE_LOADER = "$(TEST_HOST)";
+                CODE_SIGN_STYLE = Automatic;
+                GENERATE_INFOPLIST_FILE = YES;
+                HEADER_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/Bridge", );
+                LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks", );
+                PRODUCT_BUNDLE_IDENTIFIER = fr.handbrake.ios.tests;
+                PRODUCT_NAME = "$(TARGET_NAME)";
+                SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+                SWIFT_OBJC_BRIDGING_HEADER = "Bridge/HandBrakeIOS-Bridging-Header.h";
+                SWIFT_VERSION = 5.0;
+                TARGETED_DEVICE_FAMILY = "1,2";
+                TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HandBrakeIOS.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HandBrakeIOS";
+            };
+            name = Debug;
+        };
+        AD0000000000000000000006 = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                BUNDLE_LOADER = "$(TEST_HOST)";
+                CODE_SIGN_STYLE = Automatic;
+                GENERATE_INFOPLIST_FILE = YES;
+                HEADER_SEARCH_PATHS = ("$(inherited)", "$(SRCROOT)/Bridge", );
+                LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks", );
+                PRODUCT_BUNDLE_IDENTIFIER = fr.handbrake.ios.tests;
+                PRODUCT_NAME = "$(TARGET_NAME)";
+                SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+                SWIFT_OBJC_BRIDGING_HEADER = "Bridge/HandBrakeIOS-Bridging-Header.h";
+                SWIFT_VERSION = 5.0;
+                TARGETED_DEVICE_FAMILY = "1,2";
+                TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HandBrakeIOS.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HandBrakeIOS";
+            };
+            name = Release;
+        };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+        AA0000000000000000000001 = {isa = XCConfigurationList; buildConfigurations = (AD0000000000000000000001, AD0000000000000000000002, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+        AA0000000000000000000002 = {isa = XCConfigurationList; buildConfigurations = (AD0000000000000000000003, AD0000000000000000000004, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+        AA0000000000000000000003 = {isa = XCConfigurationList; buildConfigurations = (AD0000000000000000000005, AD0000000000000000000006, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+/* End XCConfigurationList section */
+    };
+    rootObject = A60000000000000000000001;
+}

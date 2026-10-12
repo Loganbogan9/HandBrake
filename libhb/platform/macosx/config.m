@@ -8,7 +8,9 @@
  */
 
 #import <Foundation/Foundation.h>
+#include <TargetConditionals.h>
 
+#if TARGET_OS_OSX
 static NSURL * macOS_last_modified_url(NSURL *url1, NSURL* url2)
 {
     NSString *presetFile = @"HandBrake/UserPresets.json";
@@ -24,6 +26,7 @@ static NSURL * macOS_last_modified_url(NSURL *url1, NSURL* url2)
 
     return presetsUrl2 && (date1 == nil || [date2 compare:date1] == NSOrderedDescending) ? url2 : url1;
 }
+#endif
 
 static NSURL * macOS_get_application_support_url()
 {
@@ -33,12 +36,17 @@ static NSURL * macOS_get_application_support_url()
 
     NSURL *appSupportURL = applicationSupportUrls.firstObject;
 
+#if TARGET_OS_OSX
     NSArray<NSURL *> *libraryUrls = [fileManager URLsForDirectory:NSLibraryDirectory
                                                         inDomains:NSUserDomainMask];
     NSString *sandboxPath = @"Containers/fr.handbrake.HandBrake/Data/Library/Application Support";
     NSURL *sandboxAppSupportURL = [libraryUrls.firstObject URLByAppendingPathComponent:sandboxPath isDirectory:YES];
 
     return macOS_last_modified_url(appSupportURL, sandboxAppSupportURL);
+#else
+    // On iOS the Foundation URL already belongs to the application's sandbox.
+    return appSupportURL;
+#endif
 }
 
 int macOS_get_user_config_directory(char path[512])

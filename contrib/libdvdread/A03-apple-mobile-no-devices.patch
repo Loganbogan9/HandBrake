@@ -1,0 +1,56 @@
+--- a/src/dvd_reader.c
++++ b/src/dvd_reader.c
+@@ -34,17 +34,24 @@
+ #include <dirent.h>         /* opendir, readdir */
+ #include <ctype.h>          /* isalpha */
+ 
++#if defined(__APPLE__)
++# include <TargetConditionals.h>
++# if TARGET_OS_IPHONE
++#  define DVDREAD_APPLE_MOBILE 1
++# endif
++#endif
++
+ #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__bsdi__) || defined(__APPLE__)
+ # define SYS_BSD 1
+ #endif
+ 
+ #if defined(__sun)
+ # include <sys/mnttab.h>
+-#elif defined(__APPLE__)
++#elif defined(__APPLE__) && !defined(DVDREAD_APPLE_MOBILE)
+ # include <sys/param.h>
+ # include <sys/ucred.h>
+ # include <sys/mount.h>
+-#elif defined(SYS_BSD)
++#elif defined(SYS_BSD) && !defined(DVDREAD_APPLE_MOBILE)
+ # include <fstab.h>
+ #elif defined(__linux__)
+ # include <mntent.h>
+@@ -553,7 +560,7 @@
+      */
+ #if defined(__sun)
+     dev_name = sun_block2char( path );
+-#elif defined(SYS_BSD)
++#elif defined(SYS_BSD) && !defined(DVDREAD_APPLE_MOBILE)
+     dev_name = bsd_block2char( path );
+ #else
+     dev_name = strdup( path );
+@@ -627,7 +634,7 @@
+         goto DVDOpen_error;
+     }
+ 
+-#if defined(__APPLE__)
++#if defined(__APPLE__) && !defined(DVDREAD_APPLE_MOBILE)
+     struct statfs s[128];
+     int r = getfsstat(NULL, 0, MNT_NOWAIT);
+     if (r > 0) {
+@@ -647,7 +654,7 @@
+             }
+         }
+     }
+-#elif defined(SYS_BSD)
++#elif defined(SYS_BSD) && !defined(DVDREAD_APPLE_MOBILE)
+     if( ( fe = getfsfile( path_copy ) ) ) {
+       dev_name = bsd_block2char( fe->fs_spec );
+       Log3(ctx, "Attempting to use device %s"

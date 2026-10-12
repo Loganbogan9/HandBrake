@@ -74,8 +74,11 @@
 #endif
 
 #ifdef __APPLE__
+#include <TargetConditionals.h>
+#if TARGET_OS_OSX
 #include <CoreServices/CoreServices.h>
 #include <IOKit/pwr_mgt/IOPMLib.h>
+#endif
 #endif
 
 #include <stddef.h>
@@ -221,7 +224,7 @@ static void init_system_info()
         hb_system_info.build = strdup(buf);
     }
 
-    hb_system_info.name = "macOS";
+    hb_system_info.name = TARGET_OS_OSX ? "macOS" : "iOS";
 #elif defined(SYS_LINUX) || defined(SYS_FREEBSD) || defined(SYS_NETBSD) || defined(SYS_OPENBSD)
     struct utsname uts;
     if (uname(&uts) == 0)
@@ -1307,7 +1310,7 @@ void hb_net_close( hb_net_t ** _n )
 
 void hb_system_backup_set_excluded(const char *path, int exclude)
 {
-#ifdef __APPLE__
+#if defined(__APPLE__) && TARGET_OS_OSX
     if (path != NULL)
     {
         CFURLRef url = CFURLCreateFromFileSystemRepresentation(kCFAllocatorDefault,
@@ -1330,7 +1333,7 @@ void hb_system_backup_set_excluded(const char *path, int exclude)
 void* hb_system_sleep_opaque_init()
 {
     void *opaque = NULL;
-#ifdef __APPLE__
+#if defined(__APPLE__) && TARGET_OS_OSX
     opaque = calloc(sizeof(IOPMAssertionID), 1);
     if (opaque == NULL)
     {
@@ -1350,7 +1353,7 @@ void hb_system_sleep_opaque_close(void **opaque)
     {
         hb_system_sleep_private_enable(*opaque);
     }
-#ifdef __APPLE__
+#if defined(__APPLE__) && TARGET_OS_OSX
     if (*opaque != NULL)
     {
         IOPMAssertionID *assertionID = (IOPMAssertionID*)*opaque;
@@ -1362,7 +1365,7 @@ void hb_system_sleep_opaque_close(void **opaque)
 
 void hb_system_sleep_private_enable(void *opaque)
 {
-#ifdef __APPLE__
+#if defined(__APPLE__) && TARGET_OS_OSX
     if (opaque == NULL)
     {
         hb_error("hb_system_sleep: opaque is NULL");
@@ -1393,7 +1396,7 @@ void hb_system_sleep_private_enable(void *opaque)
 
 void hb_system_sleep_private_disable(void *opaque)
 {
-#ifdef __APPLE__
+#if defined(__APPLE__) && TARGET_OS_OSX
     if (opaque == NULL)
     {
         hb_error("hb_system_sleep: opaque is NULL");

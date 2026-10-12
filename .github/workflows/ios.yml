@@ -1,0 +1,113 @@
+name: Native iOS engine and application
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'ios/**'
+      - 'libhb/**'
+      - 'make/**'
+      - 'contrib/**'
+      - '.github/workflows/ios.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  native-ios:
+    runs-on: macos-15
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Inspect selected Apple toolchain
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-path
+          xcrun --sdk iphonesimulator --show-sdk-path
+          uname -m
+
+      - name: Install HandBrake contrib build tools
+        run: |
+          missing=()
+          for formula in autoconf automake libtool pkg-config cmake meson ninja nasm; do
+            if ! brew list --versions "$formula" >/dev/null 2>&1; then
+              missing+=("$formula")
+            fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            brew install "${missing[@]}"
+          fi
+
+      - name: Cache SHA256-verified source downloads
+        uses: actions/cache@v4
+        with:
+          path: download
+          key: handbrake-ios-contrib-${{ hashFiles('contrib/**/module.defs') }}
+
+      - name: Run portable build and project tests
+        run: |
+          python3 -m unittest discover -s ios/Tests -p 'test_*.py' -v
+          python3 libhb/tests/test_vt_error.py
+          python3 libhb/tests/test_resume.py
+          mkdir -p ios/build
+          cc -std=c11 -Wall -Wextra -Werror ios/Tests/test_job_policy.c -lm -o ios/build/test-job-policy
+          ios/build/test-job-policy
+
+      - name: Build and verify device and simulator engine libraries
+        run: |
+          python3 ios/scripts/build-engine.py --jobs 3 --simulator-arch "$(uname -m)"
+
+      - name: Evaluate experimental SwiftPM manifest and package graph
+        run: |
+          swift package --package-path ios dump-package > ios/build/SwiftPackage.json
+          swift package --package-path ios describe --type json > ios/build/SwiftPackageGraph.json
+
+      - name: Compile unsigned device application
+        run: |
+          xcodebuild -project ios/HandBrakeIOS.xcodeproj -scheme HandBrakeIOS \
+            -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO \
+            -derivedDataPath ios/build/DeviceDerivedData build
+
+      - name: Select and boot an available iPhone simulator
+        id: simulator
+        run: |
+          uuid=$(xcrun simctl list devices available --json | python3 -c '
+          import json,sys
+          data=json.load(sys.stdin)
+          candidates=[d for runtime, devices in data["devices"].items() if "iOS" in runtime for d in devices if d.get("isAvailable") and d["name"].startswith("iPhone")]
+          if not candidates:
+              sys.exit("No available iPhone simulator")
+          print(candidates[0]["udid"])
+          ')
+          echo "uuid=$uuid" >> "$GITHUB_OUTPUT"
+          state=$(xcrun simctl list devices available --json | python3 -c 'import json,sys; target=sys.argv[1]; print(next(d["state"] for devices in json.load(sys.stdin)["devices"].values() for d in devices if d["udid"]==target))' "$uuid")
+          if [ "$state" != 'Booted' ]; then
+            xcrun simctl boot "$uuid"
+          fi
+          xcrun simctl bootstatus "$uuid" -b
+
+      - name: Test real libhb scanning and H.264/AAC transcoding
+        run: |
+          xcodebuild -project ios/HandBrakeIOS.xcodeproj -scheme HandBrakeIOS \
+            -destination 'platform=iOS Simulator,id=${{ steps.simulator.outputs.uuid }}' \
+            CODE_SIGNING_ALLOWED=NO -derivedDataPath ios/build/SimulatorDerivedData \
+            -resultBundlePath ios/build/EngineTests.xcresult test
+
+      - name: Preserve diagnostics and built artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: handbrake-ios-engine-validation
+          if-no-files-found: warn
+          path: |
+            ios/Artifacts/HandBrakeEngine.xcframework
+            ios/Artifacts/HandBrakeEngine-Licenses
+            ios/build/EngineTests.xcresult
+            ios/build/SwiftPackage.json
+            ios/build/SwiftPackageGraph.json
+            ios/build/engine/**/log
+            ios/build/engine/**/package/build-manifest.json
+            ios/build/engine/**/ios-build-identity.json

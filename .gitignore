@@ -24,6 +24,8 @@ macosx/**/xcshareddata/IDEWorkspaceChecks.plist
 build/
 build.*/
 download/
+/make/__pycache__/
+/libhb/tests/__pycache__/
 
 # Gtk
 gtk/ABOUT-NLS

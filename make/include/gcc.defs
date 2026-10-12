@@ -58,6 +58,13 @@ ifeq (darwin,$(HOST.system))
 endif
 GCC.args.sysroot           = --sysroot=$(1)
 GCC.args.minver            = -mmacosx-version-min=$(1)
+ifeq (1,$(FEATURE.ios))
+    ifeq (iphoneos,$(IOS.sdk))
+        GCC.args.minver    = -miphoneos-version-min=$(1)
+    else
+        GCC.args.minver    = -mios-simulator-version-min=$(1)
+    endif
+endif
 GCC.args.vis               = -fvisibility=hidden
 GCC.args.pic               = -fPIC
 GCC.args.c_std             = -std=gnu99

@@ -108,7 +108,9 @@ MODULES += libhb
 
 ###############################################################################
 
-ifeq (1-darwin,$(FEATURE.xcode)-$(HOST.system))
+ifeq (1,$(FEATURE.ios))
+    # iOS embeds libhb; it cannot execute HandBrakeCLI or the macOS GUI.
+else ifeq (1-darwin,$(FEATURE.xcode)-$(HOST.system))
     ## use macosx module when xcode+darwin
     MODULES += macosx
 else
@@ -129,3 +131,6 @@ MODULES += pkg
 include $(MODULES:%=$(SRC/)%/module.defs)
 include $(SRC/)make/variant/$(HOST.system).defs
 -include $(SRC/)make/variant/$(HOST.system).$(HOST.machine).defs
+ifeq (1,$(FEATURE.ios))
+    include $(SRC/)make/include/ios.defs
+endif

@@ -66,7 +66,7 @@ static int rotate_vt_init(hb_filter_object_t *filter,
     int           height = init->geometry.height;
     int           angle  = 0, hflip = 0;
 
-    if (__builtin_available (macOS 13, *))
+    if (__builtin_available (macOS 13, iOS 16, tvOS 16, *))
     {
         CFStringRef   trans  = kVTRotation_0;
 
@@ -163,7 +163,7 @@ static void rotate_vt_close(hb_filter_object_t *filter)
         return;
     }
 
-    if (__builtin_available (macOS 13, *))
+    if (__builtin_available (macOS 13, iOS 16, tvOS 16, *))
     {
         if (pv->session)
         {
@@ -219,7 +219,7 @@ static int rotate_vt_work(hb_filter_object_t *filter,
     }
 
     // Do work
-    if (__builtin_available (macOS 13, *))
+    if (__builtin_available (macOS 13, iOS 16, tvOS 16, *))
     {
         err = VTPixelRotationSessionRotateImage(pv->session, source_buf, dest_buf);
         if (err != noErr)

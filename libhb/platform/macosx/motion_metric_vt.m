@@ -64,7 +64,7 @@ static int hb_motion_metric_vt_init(hb_motion_metric_object_t *metric,
     }
 
     char *function_name = "motion_metric";
-    if (@available(macOS 13, *))
+    if (@available(macOS 13, iOS 16, tvOS 16, *))
     {
         if ([pv->mtl->device supportsFamily:MTLGPUFamilyMetal3])
         {

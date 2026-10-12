@@ -10,6 +10,7 @@
 #include <VideoToolbox/VideoToolbox.h>
 #include <CoreMedia/CoreMedia.h>
 #include <CoreVideo/CoreVideo.h>
+#include <TargetConditionals.h>
 #include "libavutil/avutil.h"
 
 #include "handbrake/handbrake.h"
@@ -38,6 +39,14 @@ hb_work_object_t hb_encvt =
 #define FRAME_INFO_SIZE 1024
 #define FRAME_INFO_MASK (FRAME_INFO_SIZE - 1)
 
+// This context outlives an individual work object when a session is reused
+// between passes. The callback and encoder thread communicate through error.
+typedef struct
+{
+    CMSimpleQueueRef queue;
+    int error;
+} hb_vt_output_context_t;
+
 struct hb_work_private_s
 {
     hb_job_t *job;
@@ -46,6 +55,7 @@ struct hb_work_private_s
     VTCompressionSessionRef session;
 
     CMSimpleQueueRef    queue;
+    hb_vt_output_context_t *output_context;
     hb_chapter_queue_t *chapter_queue;
 
     // DTS calculation
@@ -163,6 +173,7 @@ typedef struct vt_interjob_s
     VTCompressionSessionRef session;
     VTMultiPassStorageRef   passStorage;
     CMSimpleQueueRef        queue;
+    hb_vt_output_context_t *output_context;
     CMFormatDescriptionRef  format;
     int                     areBframes;
 } vt_interjob_t;
@@ -1133,6 +1144,8 @@ void hb_vt_compression_output_callback(
                                    CMSampleBufferRef sampleBuffer)
 {
     OSStatus err;
+    hb_vt_output_context_t *context = outputCallbackRefCon;
+    (void)infoFlags;
 
     if (sourceFrameRefCon)
     {
@@ -1147,20 +1160,29 @@ void hb_vt_compression_output_callback(
     if (status != noErr)
     {
         hb_log("VTCompressionSession: hb_vt_compression_output_callback called error");
+#if !TARGET_OS_OSX
+        __atomic_store_n(&context->error, status, __ATOMIC_RELAXED);
+#endif
     }
     else if (sampleBuffer)
     {
         CFRetain(sampleBuffer);
-        CMSimpleQueueRef queue = outputCallbackRefCon;
-        err = CMSimpleQueueEnqueue(queue, sampleBuffer);
+        err = CMSimpleQueueEnqueue(context->queue, sampleBuffer);
         if (err)
         {
             hb_log("VTCompressionSession: hb_vt_compression_output_callback queue full");
+            CFRelease(sampleBuffer);
+#if !TARGET_OS_OSX
+            __atomic_store_n(&context->error, err, __ATOMIC_RELAXED);
+#endif
         }
     }
     else
     {
         hb_log("VTCompressionSession: hb_vt_compression_output_callback sample buffer is NULL");
+#if !TARGET_OS_OSX
+        __atomic_store_n(&context->error, kVTVideoEncoderMalfunctionErr, __ATOMIC_RELAXED);
+#endif
     }
 }
 
@@ -1177,14 +1199,35 @@ static OSStatus hb_vt_init_session(hb_work_object_t *w, hb_job_t *job, hb_work_p
 
     if (pv->settings.codec == kCMVideoCodecType_H264 || pv->settings.codec == kCMVideoCodecType_HEVC)
     {
+        if (__builtin_available(macOS 10.9, iOS 17.4, tvOS 17.4, visionOS 1.1, *))
+        {
+            CFDictionaryAddValue(encoderSpecifications, kVTVideoEncoderSpecification_RequireHardwareAcceleratedVideoEncoder, kCFBooleanTrue);
+        }
+        else
+        {
+            hb_error("VideoToolbox hardware encoder selection requires iOS 17.4 or later");
+            CFRelease(encoderSpecifications);
+            return kVTCouldNotFindVideoEncoderErr;
+        }
+    }
+
+#if !TARGET_OS_OSX
+    else if (__builtin_available(iOS 17.4, tvOS 17.4, visionOS 1.1, *))
+    {
         CFDictionaryAddValue(encoderSpecifications, kVTVideoEncoderSpecification_RequireHardwareAcceleratedVideoEncoder, kCFBooleanTrue);
     }
+    else
+    {
+        CFRelease(encoderSpecifications);
+        return kVTCouldNotFindVideoEncoderErr;
+    }
+#endif
 
     if (pv->settings.registryID > 0)
     {
         cfValue = CFNumberCreate(kCFAllocatorDefault, kCFNumberLongLongType,
                                  &pv->settings.registryID);
-        if (__builtin_available(macOS 10.14, *))
+        if (__builtin_available(macOS 10.14, iOS 13, tvOS 13, *))
         {
             CFDictionaryAddValue(encoderSpecifications, kVTVideoEncoderSpecification_RequiredEncoderGPURegistryID, cfValue);
         }
@@ -1203,7 +1246,21 @@ static OSStatus hb_vt_init_session(hb_work_object_t *w, hb_job_t *job, hb_work_p
                                                                &kCFTypeDictionaryValueCallBacks);
     CFRelease(pix_fmt_num);
 
-    CMSimpleQueueCreate(kCFAllocatorDefault, 200, &pv->queue);
+    err = CMSimpleQueueCreate(kCFAllocatorDefault, 200, &pv->queue);
+    if (err != noErr)
+    {
+        CFRelease(imageBufferAttributes);
+        CFRelease(encoderSpecifications);
+        return err;
+    }
+    pv->output_context = calloc(1, sizeof(*pv->output_context));
+    if (pv->output_context == NULL)
+    {
+        CFRelease(imageBufferAttributes);
+        CFRelease(encoderSpecifications);
+        return -1;
+    }
+    pv->output_context->queue = pv->queue;
 
     err = VTCompressionSessionCreate(
                                kCFAllocatorDefault,
@@ -1214,7 +1271,7 @@ static OSStatus hb_vt_init_session(hb_work_object_t *w, hb_job_t *job, hb_work_p
                                imageBufferAttributes,
                                NULL,
                                &hb_vt_compression_output_callback,
-                               pv->queue,
+                               pv->output_context,
                                &pv->session);
 
     CFRelease(imageBufferAttributes);
@@ -1287,7 +1344,7 @@ static OSStatus hb_vt_init_session(hb_work_object_t *w, hb_job_t *job, hb_work_p
                        cfValue);
     CFRelease(cfValue);
 
-    if (__builtin_available(macOS 11, *))
+    if (__builtin_available(macOS 11, iOS 14, tvOS 14, *))
     {
         if (supportedProps != NULL && CFDictionaryContainsKey(supportedProps, kVTCompressionPropertyKey_PrioritizeEncodingSpeedOverQuality))
         {
@@ -1297,7 +1354,7 @@ static OSStatus hb_vt_init_session(hb_work_object_t *w, hb_job_t *job, hb_work_p
         }
     }
 
-    if (__builtin_available(macOS 12, *))
+    if (__builtin_available(macOS 12, iOS 15, tvOS 15, *))
     {
         if (pv->settings.maxAllowedFrameQP > -1)
         {
@@ -1310,7 +1367,7 @@ static OSStatus hb_vt_init_session(hb_work_object_t *w, hb_job_t *job, hb_work_p
         }
     }
 
-    if (__builtin_available(macOS 13, *))
+    if (__builtin_available(macOS 13, iOS 16, tvOS 16, *))
     {
         if (pv->settings.minAllowedFrameQP > -1)
         {
@@ -1343,7 +1400,7 @@ static OSStatus hb_vt_init_session(hb_work_object_t *w, hb_job_t *job, hb_work_p
         CFRelease(cfValue);
     }
 
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 150000
+#if TARGET_OS_OSX && __MAC_OS_X_VERSION_MAX_ALLOWED >= 150000
     if (__builtin_available(macOS 15, *))
     {
         // Control spatial adaptation of the quantization parameter (QP) based on per-frame statistics.
@@ -1454,7 +1511,7 @@ static OSStatus hb_vt_init_session(hb_work_object_t *w, hb_job_t *job, hb_work_p
                            pv->settings.color.ambientViewingEnviroment);
     }
 
-    if (__builtin_available(macOS 11.0, *))
+    if (__builtin_available(macOS 11.0, iOS 14, tvOS 14, *))
     {
         if (pv->settings.codec != kCMVideoCodecType_H264)
         {
@@ -1507,28 +1564,63 @@ static OSStatus hb_vt_init_session(hb_work_object_t *w, hb_job_t *job, hb_work_p
                        cfValue);
     CFRelease(cfValue);
 
-    if (pv->settings.quality > -1)
+    int fixed_profile_encoding = 0;
+#if !TARGET_OS_OSX
+    // ProRes quality is defined by the selected profile, not H.26x rate control.
+    fixed_profile_encoding = job->vcodec == HB_VCODEC_VT_PRORES;
+#endif
+    if (!fixed_profile_encoding && pv->settings.quality > -1)
     {
         cfValue = CFNumberCreate(kCFAllocatorDefault, kCFNumberDoubleType,
                                  &pv->settings.quality);
-        hb_vt_set_property(pv->session,
+        err = hb_vt_set_property(pv->session,
                            kVTCompressionPropertyKey_Quality,
+                           cfValue);
+        CFRelease(cfValue);
+    }
+    else if (!fixed_profile_encoding)
+    {
+        cfValue = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType,
+                                 &pv->settings.averageBitRate);
+        err = hb_vt_set_property(pv->session,
+                           kVTCompressionPropertyKey_AverageBitRate,
                            cfValue);
         CFRelease(cfValue);
     }
     else
     {
-        cfValue = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType,
-                                 &pv->settings.averageBitRate);
-        hb_vt_set_property(pv->session,
-                           kVTCompressionPropertyKey_AverageBitRate,
-                           cfValue);
-        CFRelease(cfValue);
+        err = noErr;
     }
 
-    hb_vt_set_property(pv->session,
-                       kVTCompressionPropertyKey_ProfileLevel,
-                       pv->settings.profileLevel);
+#if !TARGET_OS_OSX
+    if (err != noErr)
+    {
+        hb_error("VideoToolbox rejected the requested rate control (%d)", err);
+        if (supportedProps != NULL)
+        {
+            CFRelease(supportedProps);
+        }
+        return err;
+    }
+#endif
+
+    if (pv->settings.profileLevel != NULL)
+    {
+        err = hb_vt_set_property(pv->session,
+                                 kVTCompressionPropertyKey_ProfileLevel,
+                                 pv->settings.profileLevel);
+#if !TARGET_OS_OSX
+        if (err != noErr)
+        {
+            hb_error("VideoToolbox rejected the requested profile and level (%d)", err);
+            if (supportedProps != NULL)
+            {
+                CFRelease(supportedProps);
+            }
+            return err;
+        }
+#endif
+    }
 
     if (pv->settings.codec == kCMVideoCodecType_H264)
     {
@@ -1580,14 +1672,23 @@ static OSStatus hb_vt_init_session(hb_work_object_t *w, hb_job_t *job, hb_work_p
             return err;
         }
 
-        hb_vt_set_property(pv->session,
+        err = hb_vt_set_property(pv->session,
                            kVTCompressionPropertyKey_MultiPassStorage,
                            pv->passStorage);
+#if !TARGET_OS_OSX
+        if (err != noErr)
+        {
+            return err;
+        }
+#endif
 
         err = VTCompressionSessionBeginPass(pv->session, 0, 0);
         if (err != noErr)
         {
             hb_log("VTCompressionSessionBeginPass failed");
+#if !TARGET_OS_OSX
+            return err;
+#endif
         }
     }
 
@@ -1597,6 +1698,28 @@ static OSStatus hb_vt_init_session(hb_work_object_t *w, hb_job_t *job, hb_work_p
         hb_log("VTCompressionSessionPrepareToEncodeFrames failed");
         return err;
     }
+
+#if !TARGET_OS_OSX
+    if (__builtin_available(iOS 17.4, tvOS 17.4, visionOS 1.1, *))
+    {
+        CFBooleanRef hardware = NULL;
+        err = VTSessionCopyProperty(pv->session,
+                                     kVTCompressionPropertyKey_UsingHardwareAcceleratedVideoEncoder,
+                                     kCFAllocatorDefault, &hardware);
+        int using_hardware = err == noErr && hardware != NULL &&
+                             CFGetTypeID(hardware) == CFBooleanGetTypeID() &&
+                             CFBooleanGetValue(hardware);
+        if (hardware != NULL)
+        {
+            CFRelease(hardware);
+        }
+        if (!using_hardware)
+        {
+            hb_error("VideoToolbox could not confirm the requested hardware encoder");
+            return kVTCouldNotFindVideoEncoderErr;
+        }
+    }
+#endif
 
     CFBooleanRef allowFrameReordering;
     if (VTSessionCopyProperty(pv->session,
@@ -1682,6 +1805,7 @@ static OSStatus hb_vt_create_cookie(hb_work_object_t *w, hb_job_t *job, hb_work_
     if (kCVReturnSuccess != err)
     {
         hb_log("VTCompressionSession: CVPixelBufferPoolCreatePixelBuffer error");
+        goto fail;
     }
 
     CMTime pts = CMTimeMake(0, pv->settings.timescale);
@@ -1708,6 +1832,7 @@ static OSStatus hb_vt_create_cookie(hb_work_object_t *w, hb_job_t *job, hb_work_
     if (!sampleBuffer)
     {
         hb_log("VTCompressionSession: sampleBuffer == NULL");
+        err = kVTVideoEncoderMalfunctionErr;
         goto fail;
     }
     else
@@ -1716,6 +1841,7 @@ static OSStatus hb_vt_create_cookie(hb_work_object_t *w, hb_job_t *job, hb_work_
         if (!format)
         {
             hb_log("VTCompressionSession: Format Description error");
+            err = kVTVideoEncoderMalfunctionErr;
         }
         else
         {
@@ -1727,8 +1853,14 @@ static OSStatus hb_vt_create_cookie(hb_work_object_t *w, hb_job_t *job, hb_work_
     }
 
 fail:
-    CVPixelBufferRelease(pix_buf);
-    VTCompressionSessionInvalidate(pv->session);
+    if (pix_buf)
+    {
+        CVPixelBufferRelease(pix_buf);
+    }
+    if (pv->session)
+    {
+        VTCompressionSessionInvalidate(pv->session);
+    }
     if (pv->passStorage)
     {
         VTMultiPassStorageClose(pv->passStorage);
@@ -1742,6 +1874,8 @@ fail:
     {
         CFRelease(pv->queue);
     }
+    free(pv->output_context);
+    pv->output_context = NULL;
     pv->session = NULL;
     pv->passStorage = NULL;
     pv->queue = NULL;
@@ -1761,6 +1895,7 @@ static OSStatus hb_vt_reuse_session(hb_work_object_t *w, hb_job_t * job, hb_work
     pv->session     = context->session;
     pv->passStorage = context->passStorage;
     pv->queue       = context->queue;
+    pv->output_context = context->output_context;
     pv->format      = context->format;
     job->areBframes = context->areBframes;
 
@@ -1807,6 +1942,22 @@ static OSStatus hb_vt_reuse_session(hb_work_object_t *w, hb_job_t * job, hb_work
 
 int encvt_init(hb_work_object_t *w, hb_job_t *job)
 {
+#if !TARGET_OS_OSX
+    if (!hb_vt_is_encoder_available(job->vcodec) ||
+        (job->vcodec == HB_VCODEC_VT_PRORES &&
+         ((job->vquality > HB_INVALID_VIDEO_QUALITY && job->vquality != 0) ||
+          (job->vquality == HB_INVALID_VIDEO_QUALITY && job->vbitrate > 0))) ||
+        (job->vquality > HB_INVALID_VIDEO_QUALITY &&
+         job->vcodec != HB_VCODEC_VT_PRORES &&
+         !hb_vt_is_constant_quality_available(job->vcodec)) ||
+        ((job->pass_id == HB_PASS_ENCODE_ANALYSIS || job->pass_id == HB_PASS_ENCODE_FINAL) &&
+         !hb_vt_is_multipass_available(job->vcodec)))
+    {
+        hb_error("The requested VideoToolbox encoder or rate control is unavailable on this device");
+        *job->die = 1;
+        return -1;
+    }
+#endif
     OSStatus err;
     hb_work_private_t *pv = calloc(1, sizeof(hb_work_private_t));
     if (pv == NULL)
@@ -1832,6 +1983,16 @@ int encvt_init(hb_work_object_t *w, hb_job_t *job)
         *job->die = 1;
         return -1;
     }
+
+#if !TARGET_OS_OSX
+    if (pv->settings.disableSpatialAdaptiveQP == kCFBooleanTrue ||
+        pv->settings.lookAheadFrameCount >= 0)
+    {
+        hb_error("VideoToolbox spatial QP and lookahead options require macOS");
+        *job->die = 1;
+        return -1;
+    }
+#endif
 
     pv->attachments = hb_vt_attachments_xlat(pv->job);
     pv->remainingPasses = job->pass_id == HB_PASS_ENCODE_ANALYSIS ? 1 : 0;
@@ -1959,6 +2120,7 @@ void encvt_close(hb_work_object_t * w)
         {
             CFRelease(pv->format);
         }
+        free(pv->output_context);
     }
 
     if (pv->settings.color.masteringDisplay)
@@ -1990,6 +2152,9 @@ static void hb_vt_send(hb_work_private_t *pv, hb_buffer_t *in)
     {
         hb_buffer_close(&in);
         hb_log("VTCompressionSession: CVPixelBuffer error");
+#if !TARGET_OS_OSX
+        __atomic_store_n(&pv->output_context->error, kVTVideoEncoderMalfunctionErr, __ATOMIC_RELAXED);
+#endif
     }
     else
     {
@@ -2033,6 +2198,10 @@ static void hb_vt_send(hb_work_private_t *pv, hb_buffer_t *in)
         if (err)
         {
             hb_log("VTCompressionSession: VTCompressionSessionEncodeFrame error");
+#if !TARGET_OS_OSX
+            hb_buffer_close(&in);
+            __atomic_store_n(&pv->output_context->error, err, __ATOMIC_RELAXED);
+#endif
         }
 
         if (frameProperties)
@@ -2074,7 +2243,13 @@ static void hb_vt_encode(hb_work_private_t *pv, hb_buffer_t *in, hb_buffer_list_
 
 static void hb_vt_flush(hb_work_private_t *pv, hb_buffer_t *in, hb_buffer_list_t *list)
 {
-    VTCompressionSessionCompleteFrames(pv->session, kCMTimeIndefinite);
+    OSStatus err = VTCompressionSessionCompleteFrames(pv->session, kCMTimeIndefinite);
+#if !TARGET_OS_OSX
+    if (err != noErr)
+    {
+        __atomic_store_n(&pv->output_context->error, err, __ATOMIC_RELAXED);
+    }
+#endif
 
     hb_buffer_t *out;
     while ((out = hb_vt_receive(pv)))
@@ -2098,6 +2273,10 @@ static void hb_vt_end_pass(hb_work_private_t *pv)
         if (err != noErr)
         {
             hb_log("VTCompressionSessionEndPass error");
+#if !TARGET_OS_OSX
+            __atomic_store_n(&pv->output_context->error, err, __ATOMIC_RELAXED);
+            return;
+#endif
         }
         if (furtherPassesRequestedOut == false)
         {
@@ -2109,6 +2288,7 @@ static void hb_vt_end_pass(hb_work_private_t *pv)
         context->session     = pv->session;
         context->passStorage = pv->passStorage;
         context->queue       = pv->queue;
+        context->output_context = pv->output_context;
         context->format      = pv->format;
         context->areBframes  = pv->job->areBframes;
 
@@ -2117,8 +2297,31 @@ static void hb_vt_end_pass(hb_work_private_t *pv)
     }
     else if (pv->job->pass_id == HB_PASS_ENCODE_FINAL)
     {
-        VTCompressionSessionEndPass(pv->session, NULL, 0);
+        OSStatus err = VTCompressionSessionEndPass(pv->session, NULL, 0);
+#if !TARGET_OS_OSX
+        if (err != noErr)
+        {
+            __atomic_store_n(&pv->output_context->error, err, __ATOMIC_RELAXED);
+        }
+#endif
     }
+}
+
+static int hb_vt_check_output_error(hb_work_private_t *pv)
+{
+#if !TARGET_OS_OSX
+    int err = __atomic_load_n(&pv->output_context->error, __ATOMIC_RELAXED);
+    if (err != noErr)
+    {
+        hb_error("VideoToolbox encoding failed (%d)", err);
+        *pv->job->done_error = HB_ERROR_UNKNOWN;
+        *pv->job->die = 1;
+        return 1;
+    }
+#else
+    (void)pv;
+#endif
+    return 0;
 }
 
 int encvt_work(hb_work_object_t *w, hb_buffer_t **buf_in, hb_buffer_t **buf_out)
@@ -2131,6 +2334,13 @@ int encvt_work(hb_work_object_t *w, hb_buffer_t **buf_in, hb_buffer_t **buf_out)
     *buf_in = NULL;
     hb_buffer_list_clear(&list);
 
+    if (hb_vt_check_output_error(pv))
+    {
+        hb_buffer_close(&in);
+        *buf_out = NULL;
+        return HB_WORK_ERROR;
+    }
+
     if (in->s.flags & HB_BUF_FLAG_EOF)
     {
         // EOF on input. Flush any frames still in the decoder then
@@ -2138,8 +2348,16 @@ int encvt_work(hb_work_object_t *w, hb_buffer_t **buf_in, hb_buffer_t **buf_out)
         hb_vt_flush(pv, in, &list);
         *buf_out = hb_buffer_list_clear(&list);
 
+        if (hb_vt_check_output_error(pv))
+        {
+            return HB_WORK_ERROR;
+        }
         hb_vt_end_pass(pv);
 
+        if (hb_vt_check_output_error(pv))
+        {
+            return HB_WORK_ERROR;
+        }
         return HB_WORK_DONE;
     }
 
@@ -2147,5 +2365,9 @@ int encvt_work(hb_work_object_t *w, hb_buffer_t **buf_in, hb_buffer_t **buf_out)
     hb_vt_encode(pv, in, &list);
     *buf_out = hb_buffer_list_clear(&list);
 
+    if (hb_vt_check_output_error(pv))
+    {
+        return HB_WORK_ERROR;
+    }
     return HB_WORK_OK;
 }

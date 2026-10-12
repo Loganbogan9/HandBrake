@@ -1,0 +1,10 @@
+# Experimental WSL frontend packaging; consumes the real prebuilt engine.
+version: 1
+bundleID: fr.handbrake.ios
+product: HandBrakeIOS
+infoPath: xtool-Info.plist
+resources:
+  - ../COPYING
+  - ../LICENSE
+  - ../AUTHORS.markdown
+  - Artifacts/HandBrakeEngine-Licenses

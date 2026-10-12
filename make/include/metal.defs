@@ -4,6 +4,12 @@ METAL.ld = xcrun metallib
 METAL.bin2c = ./bin2c
 
 METAL.args.extra = -O2 -std=macos-metal2.4
+ifeq (1,$(FEATURE.ios))
+    METAL.cc = xcrun --sdk $(IOS.sdk) metal
+    METAL.ar = xcrun --sdk $(IOS.sdk) metal-ar
+    METAL.ld = xcrun --sdk $(IOS.sdk) metallib
+    METAL.args.extra = -O2 -std=ios-metal2.4
+endif
 
 ###############################################################################
 

@@ -252,9 +252,9 @@ static int lapsharp_vt_init(hb_filter_object_t *filter,
         NSUInteger length = kernel->size * kernel->size * sizeof(int);
 
         pv->mem[c] = [pv->mtl->device newBufferWithLength:length
-                                                  options:MTLResourceStorageModeManaged];
+                                                  options:HB_METAL_RESOURCE_MODE_CPU];
         memcpy(pv->mem[c].contents, kernel->mem, length);
-        [pv->mem[c] didModifyRange:NSMakeRange(0, length)];
+        hb_metal_buffer_did_modify(pv->mem[c], NSMakeRange(0, length));
 
         ctx->size = kernel->size;
         ctx->coef = kernel->coef;
