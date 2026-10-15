@@ -3,6 +3,11 @@
 
 HandBrake is an open-source video transcoder available for Linux, Mac, and Windows, licensed under the [GNU General Public License (GPL) Version 2](LICENSE).
 
+This fork adds an experimental native iOS/iPadOS port. Follow the
+[Mac build instructions](ios/BUILDING.md) to build its engine, run the app in
+Xcode, and test on an iPhone or iPad. Apple compilation and runtime validation
+are still pending; see the [port status](ios/README.md).
+
 HandBrake takes videos you already have and makes new ones that work on your mobile phone, tablet, TV media player, game console, computer, or web browser—nearly anything that supports modern video formats.
 
 HandBrake works with most common video files and formats, including ones created by consumer and professional video cameras, mobile devices such as phones and tablets, game and computer screen recordings, and DVD and Blu-ray discs. HandBrake leverages tools such as FFmpeg, x264, and x265, SVT-AV1 to create new MP4, MKV or WebM video files from these *Sources*.
