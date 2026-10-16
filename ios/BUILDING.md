@@ -230,9 +230,17 @@ python3 ios/scripts/build-engine.py --device-only --jobs 4
 python3 ios/scripts/build-engine.py --simulator-arch arm64 --simulator-arch x86_64 --jobs 4
 ```
 
-The initial build disables optional x265, Rust libdovi and nonfree FDK-AAC.
-Software H.264 uses x264; AAC uses the FFmpeg encoder. HEVC encoding uses
-VideoToolbox when available. HandBrake's GPL and dependency licenses apply;
+The build includes software x265 HEVC encoding at 8, 10 and 12 bits, using
+HandBrake's pinned x265 source release. The iOS build uses its portable C++
+implementation with assembly disabled; performance needs device testing.
+The link check requires all three x265 APIs and the simulator tests encode
+HEVC with all three bit depths. These Apple checks are pending execution.
+After pulling this change, use a fresh `--build-root` if you built the older
+engine without x265. The normal command in step 4 enables x265 automatically.
+
+Rust libdovi and nonfree FDK-AAC remain disabled. Software H.264 uses x264;
+AAC uses the FFmpeg encoder. VideoToolbox HEVC remains available on supported
+devices. HandBrake's GPL and dependency licenses apply;
 preserve the generated notices and corresponding source when distributing
 builds. See [README.md](README.md) for the port's current capabilities and
 validation status.

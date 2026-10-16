@@ -28,6 +28,11 @@ jobs:
           xcrun --sdk iphoneos --show-sdk-path
           xcrun --sdk iphonesimulator --show-sdk-path
           uname -m
+          if ! xcrun --sdk iphoneos metal --version; then
+            xcodebuild -downloadComponent metalToolchain
+          fi
+          xcrun --sdk iphoneos metal --version
+          xcrun --sdk iphonesimulator metal --version
 
       - name: Install HandBrake contrib build tools
         run: |
@@ -56,7 +61,7 @@ jobs:
           cc -std=c11 -Wall -Wextra -Werror ios/Tests/test_job_policy.c -lm -o ios/build/test-job-policy
           ios/build/test-job-policy
 
-      - name: Build and verify device and simulator engine libraries
+      - name: Build and verify device and simulator engine libraries with x265
         run: |
           python3 ios/scripts/build-engine.py --jobs 3 --simulator-arch "$(uname -m)"
 
@@ -68,8 +73,11 @@ jobs:
       - name: Compile unsigned device application
         run: |
           xcodebuild -project ios/HandBrakeIOS.xcodeproj -scheme HandBrakeIOS \
-            -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO \
+            -configuration Debug -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO \
             -derivedDataPath ios/build/DeviceDerivedData build
+          ditto -c -k --keepParent \
+            ios/build/DeviceDerivedData/Build/Products/Debug-iphoneos/HandBrakeIOS.app \
+            ios/build/HandBrakeIOS-unsigned-device.zip
 
       - name: Select and boot an available iPhone simulator
         id: simulator
@@ -89,7 +97,7 @@ jobs:
           fi
           xcrun simctl bootstatus "$uuid" -b
 
-      - name: Test real libhb scanning and H.264/AAC transcoding
+      - name: Test real libhb scanning and H.264 and x265 HEVC transcoding
         run: |
           xcodebuild -project ios/HandBrakeIOS.xcodeproj -scheme HandBrakeIOS \
             -destination 'platform=iOS Simulator,id=${{ steps.simulator.outputs.uuid }}' \
@@ -102,10 +110,12 @@ jobs:
         with:
           name: handbrake-ios-engine-validation
           if-no-files-found: warn
+          retention-days: 7
           path: |
             ios/Artifacts/HandBrakeEngine.xcframework
             ios/Artifacts/HandBrakeEngine-Licenses
             ios/build/EngineTests.xcresult
+            ios/build/HandBrakeIOS-unsigned-device.zip
             ios/build/SwiftPackage.json
             ios/build/SwiftPackageGraph.json
             ios/build/engine/**/log

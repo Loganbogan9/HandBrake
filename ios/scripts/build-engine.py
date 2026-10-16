@@ -27,8 +27,9 @@ PACKAGES = (
     "libass", "libavformat", "libavfilter", "libavcodec", "libavutil",
     "libswresample", "libswscale", "dvdnav", "dvdread", "theoraenc",
     "theoradec", "vorbis", "vorbisenc", "ogg", "x264", "libbluray",
-    "jansson", "libturbojpeg", "SvtAv1Enc",
+    "jansson", "libturbojpeg", "SvtAv1Enc", "x265",
 )
+X265_BIT_DEPTHS = (8, 10, 12)
 FRAMEWORKS = (
     "Foundation", "CoreFoundation", "CoreGraphics", "CoreText", "AudioToolbox",
     "VideoToolbox", "CoreMedia", "CoreVideo", "IOSurface", "Metal", "Accelerate", "QuartzCore",
@@ -71,8 +72,11 @@ def write_text(path, value):
         stream.write(value)
 
 
-def make_wrapper(path, executable, arguments=()):
-    write_text(path, "#!/bin/sh\nexec " + shlex.join([executable, *arguments]) + ' "$@"\n')
+def make_wrapper(path, executable, arguments=(), *, unset_environment=()):
+    script = "#!/bin/sh\n"
+    if unset_environment:
+        script += "unset " + shlex.join(unset_environment) + "\n"
+    write_text(path, script + "exec " + shlex.join([executable, *arguments]) + ' "$@"\n')
     path.chmod(0o755)
 
 
@@ -144,6 +148,18 @@ def toolchain_files(directory, target, sdk_root, clang, clangxx, ar, ranlib, pkg
         "[built-in options]", "default_library = 'static'", "b_staticpic = true", "",
     ]))
     return tools, cc, cxx, cmake, meson
+
+
+def host_compiler_wrappers(directory, sdk_root, clang, clangxx):
+    # bin2c runs on the build Mac. Xcode clang does not reliably discover system
+    # headers after SDKROOT is cleared, so give native helpers an explicit macOS
+    # SDK while keeping target iOS flags out of their compilation.
+    tools = directory / "tools"
+    cc, cxx = tools / "hb-host-clang", tools / "hb-host-clang++"
+    for compiler, executable in ((cc, clang), (cxx, clangxx)):
+        make_wrapper(compiler, executable, ["-isysroot", str(sdk_root)],
+                     unset_environment=("IPHONEOS_DEPLOYMENT_TARGET", "IPHONESIMULATOR_DEPLOYMENT_TARGET"))
+    return cc, cxx
 
 
 def dependency_archives(directory, env):
@@ -230,11 +246,41 @@ def verify_archive_platform(archive, target):
     return objects
 
 
+def verify_x265_multilib(archive, target):
+    """Require definitions from each statically linked x265 bit-depth variant.
+
+    The 8-bit public API delegates to C++ namespace APIs for 10/12-bit. Checking
+    definitions (nm -U excludes undefined references) catches an incomplete
+    multilib archive even when the generic public x265 API still links.
+    """
+    symbols = run(["xcrun", "--sdk", target.sdk, "nm", "-gU", archive], capture=True)
+    defined = {line.split()[-1] for line in symbols.splitlines() if line.strip()}
+    expected = {
+        "_x265_api_query": 8,
+        "__ZN10x265_10bit14x265_api_queryEiiPi": 10,
+        "__ZN10x265_12bit14x265_api_queryEiiPi": 12,
+    }
+    for symbol, depth in expected.items():
+        if symbol not in defined:
+            raise RuntimeError(f"Missing statically linked {depth}-bit x265 API in {archive}: {symbol}")
+
+
 def link_smoke(directory, target, cc, env, archive, headers, dependency_flags):
     source = directory / "engine-link-smoke.m"
     write_text(source, """#include <handbrake/handbrake.h>
+#include <x265.h>
 int main(void)
 {
+    const int depths[] = {8, 10, 12};
+    for (unsigned i = 0; i < sizeof(depths) / sizeof(depths[0]); i++)
+    {
+        int error = 0;
+        const x265_api *api = x265_api_query(depths[i], X265_BUILD, &error);
+        if (!api || api->bit_depth != depths[i] || api->api_build_number != X265_BUILD) return 2;
+        x265_param *param = api->param_alloc();
+        if (!param) return 3;
+        api->param_free(param);
+    }
     hb_global_init();
     hb_handle_t *handle = hb_init(0);
     if (!handle) return 1;
@@ -287,7 +333,8 @@ def build_target(target, root, jobs, configure_only=False):
                 "sdk_version": xcrun(target.sdk, "--show-sdk-version"),
                 "compiler_version": run([clang, "--version"], capture=True).splitlines()[0],
                 "configuration_sha256": fingerprint.hexdigest(), "lto": False,
-                "x265": False, "libdovi": False, "fdk_aac": False}
+                "x265": True, "x265_bit_depths": list(X265_BIT_DEPTHS),
+                "libdovi": False, "fdk_aac": False}
     identity_file = directory / "ios-build-identity.json"
     if identity_file.exists() and json.loads(identity_file.read_text()) != identity:
         raise RuntimeError(f"Build configuration changed for {directory}; use a fresh --build-root")
@@ -295,22 +342,26 @@ def build_target(target, root, jobs, configure_only=False):
     tools, cc, cxx, cmake, meson = toolchain_files(
         directory, target, sdk_root, clang, clangxx, ar, ranlib, pkgconfig,
     )
+    host_cc, host_cxx = host_compiler_wrappers(
+        directory, Path(xcrun("macosx", "--show-sdk-path")),
+        xcrun("macosx", "--find", "clang"), xcrun("macosx", "--find", "clang++"),
+    )
     env = os.environ.copy()
     # Do not inherit macOS SDK/flags or Homebrew pkg-config libraries.
     for name in ("CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS", "SDKROOT",
                  "MACOSX_DEPLOYMENT_TARGET", "CMAKE_PREFIX_PATH", "CPATH", "LIBRARY_PATH"):
         env.pop(name, None)
     env.update({"PATH": str(tools) + os.pathsep + env["PATH"], "CC": str(cc), "CXX": str(cxx),
-                "CC_FOR_BUILD": clang, "CXX_FOR_BUILD": clangxx, "AR": ar, "RANLIB": ranlib,
+                "CC_FOR_BUILD": str(host_cc), "CXX_FOR_BUILD": str(host_cxx), "AR": ar, "RANLIB": ranlib,
                 "PKG_CONFIG_PATH": "", "PKG_CONFIG_LIBDIR": str(directory / "contrib/lib/pkgconfig"),
                 "IPHONEOS_DEPLOYMENT_TARGET": target.minimum})
     command = [sys.executable, REPOSITORY / "make/configure.py", "--src", REPOSITORY,
                "--build", directory, "--force", "--disable-xcode", "--disable-gtk",
                "--arch", target.arch, "--ios", target.sdk, "--sysroot", sdk_root,
                "--minver", target.minimum, "--ios-cmake-toolchain", cmake,
-               "--ios-meson-cross", meson, "--ios-host-cc", clang,
+               "--ios-meson-cross", meson, "--ios-host-cc", host_cc,
                "--cc", cc, "--ar", ar, "--ranlib", ranlib,
-               "--disable-x265", "--disable-libdovi", "--disable-fdk-aac",
+               "--enable-x265", "--disable-numa", "--disable-libdovi", "--disable-fdk-aac",
                "--disable-nvenc", "--disable-nvdec", "--disable-qsv", "--disable-vce",
                "--enable-ffmpeg-aac", "--enable-ffmpeg-prores", "--optimize", "speed", "--lto", "off"]
     run(command, cwd=REPOSITORY, env=env)
@@ -335,6 +386,7 @@ def build_target(target, root, jobs, configure_only=False):
     if actual_arches != [target.arch]:
         raise RuntimeError(f"Unexpected architectures in {merged}: {actual_arches}")
     verify_archive_platform(merged, target)
+    verify_x265_multilib(merged, target)
     link_smoke(directory, target, cc, env, merged, headers, flags)
     write_text(package / "build-manifest.json", json.dumps({**identity,
                "archives": [str(p) for p in archives], "link_flags": flags}, indent=2) + "\n")
@@ -420,7 +472,8 @@ def main(arguments=None):
     if args.plan:
         print(json.dumps({"host": platform.system(), "targets": [target.triple for target in targets],
               "output": str(args.output), "engine": "libhb/libhandbrake.a", "pkgconfig_packages": PACKAGES,
-              "frameworks": FRAMEWORKS, "disabled_optional_dependencies": ["x265", "libdovi", "fdk-aac"],
+              "frameworks": FRAMEWORKS, "x265_bit_depths": X265_BIT_DEPTHS,
+              "disabled_optional_dependencies": ["libdovi", "fdk-aac"],
               "validation": "compile and static link only; device/runtime tests require Xcode and a device"}, indent=2))
         return 0
     if platform.system() != "Darwin":

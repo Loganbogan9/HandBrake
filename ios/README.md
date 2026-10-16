@@ -69,11 +69,14 @@ instead of macOS device enumeration and managed resources. The libbluray and
 libdvdread compatibility patches remove desktop disk-device discovery while
 preserving file readers. Desktop behavior is retained behind platform guards.
 
-The initial build retains x264, FFmpeg, AAC, VP8/VP9, SVT-AV1, dav1d, Opus,
+The build retains x264, FFmpeg, AAC, VP8/VP9, SVT-AV1, dav1d, Opus,
 Vorbis, Theora, LAME, containers, subtitle libraries and software/Metal filters.
-Optional software x265, Rust libdovi and nonfree FDK-AAC are disabled in the
-initial build. HEVC encoding uses explicitly selected VideoToolbox hardware
-when available. Apple hardware selection/verification keys require iOS 17.4;
+Software x265 HEVC is included at 8, 10 and 12 bits using the pinned contrib
+source, portable C++ kernels and separate device and simulator toolchains.
+Apple compilation and the new x265 encoding tests remain unverified.
+Rust libdovi and nonfree FDK-AAC remain disabled. HEVC also supports explicitly
+selected VideoToolbox hardware when available. Apple hardware
+selection/verification keys require iOS 17.4;
 iOS 17.0–17.3 uses the available software encoders. Simulator capabilities can
 therefore differ from a physical device.
 

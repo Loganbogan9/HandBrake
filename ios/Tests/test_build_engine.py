@@ -1,8 +1,12 @@
 """Portable checks for platform isolation and static-library completeness."""
 import importlib.util
+import contextlib
+import io
+import json
 from pathlib import Path
 import plistlib
 import re
+import shlex
 import struct
 import sys
 import tempfile
@@ -61,6 +65,20 @@ class ArchivePlatformTests(unittest.TestCase):
 
 
 class DependencyClosureTests(unittest.TestCase):
+    def test_x265_static_archive_is_included_in_the_packaged_closure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "libhb").mkdir()
+            (root / "contrib/lib").mkdir(parents=True)
+            engine = root / "libhb/libhandbrake.a"
+            x265 = root / "contrib/lib/libx265.a"
+            engine.touch()
+            x265.touch()
+            with patch.object(build, "run", return_value="-lx265 -lc++ -lm") as run:
+                archives, _ = build.dependency_archives(root, {})
+            self.assertIn("x265", run.call_args.args[0])
+            self.assertEqual(archives, [engine, x265])
+
     def test_missing_target_library_does_not_fall_back_to_host(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -85,7 +103,45 @@ class DependencyClosureTests(unittest.TestCase):
             self.assertIn("-lc++", flags)
 
 
+class X265ProfileTests(unittest.TestCase):
+    def test_default_plan_requires_all_x265_depths(self):
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            self.assertEqual(build.main(["--plan"]), 0)
+        plan = json.loads(output.getvalue())
+        self.assertIn("x265", plan["pkgconfig_packages"])
+        self.assertEqual(plan["x265_bit_depths"], [8, 10, 12])
+        self.assertEqual(plan["disabled_optional_dependencies"], ["libdovi", "fdk-aac"])
+
+    def test_multilib_verification_requires_defined_high_depth_apis(self):
+        symbols = "\n".join([
+            "0000000000000000 T _x265_api_query",
+            "0000000000000000 T __ZN10x265_10bit14x265_api_queryEiiPi",
+            "0000000000000000 T __ZN10x265_12bit14x265_api_queryEiiPi",
+        ])
+        target = build.Target("iphoneos", "arm64", "17.0")
+        with patch.object(build, "run", return_value=symbols) as run:
+            build.verify_x265_multilib(Path("engine.a"), target)
+            self.assertIn("-gU", run.call_args.args[0])
+        with patch.object(build, "run", return_value=symbols.splitlines()[0]):
+            with self.assertRaisesRegex(RuntimeError, "Missing statically linked 10-bit x265 API"):
+                build.verify_x265_multilib(Path("engine.a"), target)
+
+
 class TargetTests(unittest.TestCase):
+    def test_native_helper_compilers_receive_the_macos_sdk_only(self):
+        with tempfile.TemporaryDirectory() as directory:
+            sdk = Path("/SDK/MacOSX.sdk")
+            cc, cxx = build.host_compiler_wrappers(
+                Path(directory), sdk, "/Xcode/clang", "/Xcode/clang++")
+            for wrapper, compiler in ((cc, "/Xcode/clang"), (cxx, "/Xcode/clang++")):
+                contents = wrapper.read_text()
+                self.assertIn("unset IPHONEOS_DEPLOYMENT_TARGET IPHONESIMULATOR_DEPLOYMENT_TARGET", contents)
+                self.assertEqual(shlex.split(contents.splitlines()[-1])[:4],
+                                 ["exec", compiler, "-isysroot", str(sdk)])
+                self.assertNotIn("-target", contents)
+                self.assertNotIn("-apple-ios", contents)
+
     def test_simulator_triple_has_its_own_platform(self):
         self.assertEqual(build.Target("iphonesimulator", "arm64", "17.0").triple,
                          "arm64-apple-ios17.0-simulator")

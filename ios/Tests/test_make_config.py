@@ -11,15 +11,15 @@ REPOSITORY = Path(__file__).resolve().parents[2]
 
 @unittest.skipUnless(shutil.which("make"), "GNU make is required for build-rule expansion")
 class MakeConfigurationTests(unittest.TestCase):
-    def configuration(self, ios, sdk="iphoneos"):
+    def configuration(self, ios, sdk="iphoneos", arch="arm64", x265=False):
         with tempfile.TemporaryDirectory() as directory:
             configuration = Path(directory) / "Makefile"
             values = [
                 f"SRC/ := {REPOSITORY.as_posix()}/", "BUILD/ := ./",
-                "HOST.system := darwin", "HOST.machine := arm64", "HOST.arch := arm64",
+                "HOST.system := darwin", f"HOST.machine := {arch}", f"HOST.arch := {arch}",
                 "HOST.spec := arm64-apple-darwin24.0.0", "HOST.cross := 1",
                 "BUILD.machine := arm64", "BUILD.spec := arm64-apple-darwin24.0.0",
-                "FEATURE.xcode := 0", "FEATURE.x265 := 0", "FEATURE.libdovi := 0",
+                "FEATURE.xcode := 0", f"FEATURE.x265 := {int(x265)}", "FEATURE.libdovi := 0",
                 "GCC.g := none", "GCC.O := speed", "GCC.cpu := none", "GCC.lto := none",
             ]
             if ios:
@@ -35,6 +35,9 @@ class MakeConfigurationTests(unittest.TestCase):
                 "$(info metal=$(LIBHB.METAL.cc) $(LIBHB.METAL.args.extra))",
                 "$(info meson=$(LIBDVDREAD.CONFIGURE.extra))",
                 "$(info cmake=$(SVT-AV1.CONFIGURE.extra))",
+                "$(info x265_8=$(call fn.ARGS,X265_8.CONFIGURE,$(X265_8.CONFIGURE.args)))",
+                "$(info x265_10=$(call fn.ARGS,X265_10.CONFIGURE,$(X265_10.CONFIGURE.args)))",
+                "$(info x265_12=$(call fn.ARGS,X265_12.CONFIGURE,$(X265_12.CONFIGURE.args)))",
                 "$(info vpx=$(LIBVPX.CONFIGURE.extra))",
                 "$(info contrib_host=$(CONTRIB.host))",
                 "$(info modules=$(MODULES))",
@@ -77,6 +80,40 @@ class MakeConfigurationTests(unittest.TestCase):
         self.assertIn("darwin-gcc.meson", values["meson"])
         self.assertIn("--target=arm64-darwin20-gcc", values["vpx"])
         self.assertIn(" test", values["modules"])
+
+    def test_x265_multilib_uses_target_toolchain_for_every_ios_slice(self):
+        for sdk, arch in (("iphoneos", "arm64"), ("iphonesimulator", "arm64"),
+                          ("iphonesimulator", "x86_64")):
+            with self.subTest(sdk=sdk, arch=arch):
+                values = self.configuration(True, sdk, arch, x265=True)
+                for depth in (8, 10, 12):
+                    command = values[f"x265_{depth}"]
+                    self.assertIn("-DCMAKE_SYSTEM_NAME=iOS", command)
+                    self.assertIn('-DCMAKE_TOOLCHAIN_FILE="/target/ios.toolchain.cmake"', command)
+                    self.assertIn(f"-DCMAKE_OSX_ARCHITECTURES={arch}", command)
+                    self.assertIn("-DENABLE_ASSEMBLY=OFF", command)
+                    self.assertIn("-DENABLE_SVE=OFF", command)
+                    self.assertIn("-DENABLE_SVE2=OFF", command)
+                    self.assertIn("-DENABLE_PIC=ON", command)
+                    self.assertIn("-DENABLE_SHARED=OFF", command)
+                    self.assertIn("-DENABLE_CLI=OFF", command)
+                    self.assertNotIn("-DCMAKE_HOST_SYSTEM=", command)
+                    self.assertIn(f"/{depth}bit;", command)
+                self.assertIn("-DLINKED_10BIT=ON", values["x265_8"])
+                self.assertIn("-DLINKED_12BIT=ON", values["x265_8"])
+                self.assertIn("-DHIGH_BIT_DEPTH=OFF", values["x265_8"])
+                self.assertIn("-DHIGH_BIT_DEPTH=ON", values["x265_10"])
+                self.assertIn("-DHIGH_BIT_DEPTH=ON", values["x265_12"])
+                self.assertIn("-DMAIN12=ON", values["x265_12"])
+
+    def test_desktop_x265_retains_existing_assembly_configuration(self):
+        values = self.configuration(False, x265=True)
+        for depth in (8, 10, 12):
+            command = values[f"x265_{depth}"]
+            self.assertNotIn("-DENABLE_ASSEMBLY=OFF", command)
+            self.assertNotIn("-DENABLE_SVE=OFF", command)
+            self.assertNotIn("-DCMAKE_SYSTEM_NAME=iOS", command)
+            self.assertIn("-DCMAKE_OSX_ARCHITECTURES=arm64", command)
 
 
 if __name__ == "__main__":

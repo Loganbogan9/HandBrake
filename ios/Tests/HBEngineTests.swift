@@ -7,7 +7,7 @@ import XCTest
 @testable import HandBrakeIOS
 
 /// These tests run the packaged libhb engine, including its reader, filters and muxer.
-/// A missing engine artifact or missing H.264/AAC capability is a test failure.
+/// Missing H.264/AAC or software x265 8/10/12-bit support is a test failure.
 @MainActor
 final class HBEngineTests: XCTestCase {
     private struct Bootstrap: Decodable {
@@ -103,6 +103,18 @@ final class HBEngineTests: XCTestCase {
         try await verifyVideoToolbox(encoderID: "vt_h264", expectedCodec: kCMVideoCodecType_H264)
     }
 
+    func testSoftwareX265EightBit() async throws {
+        try await verifySoftwareX265(encoderID: "x265", bitDepth: 8)
+    }
+
+    func testSoftwareX265TenBit() async throws {
+        try await verifySoftwareX265(encoderID: "x265_10bit", bitDepth: 10)
+    }
+
+    func testSoftwareX265TwelveBit() async throws {
+        try await verifySoftwareX265(encoderID: "x265_12bit", bitDepth: 12)
+    }
+
     func testDisabledConcreteFDKAACDoesNotFallBack() async throws {
         let engine = HBEngine()
         let output = FileManager.default.temporaryDirectory
@@ -189,6 +201,56 @@ final class HBEngineTests: XCTestCase {
         await fulfillment(of: [completion], timeout: 20)
         if let operationError { throw operationError }
         return try JSONDecoder().decode(Bootstrap.self, from: XCTUnwrap(response))
+    }
+
+    private func verifySoftwareX265(encoderID: String, bitDepth: Int) async throws {
+        let engine = HBEngine()
+        let output = FileManager.default.temporaryDirectory
+            .appendingPathComponent("handbrake-\(encoderID)-\(UUID().uuidString).mp4")
+        defer { stop(engine, removing: output) }
+        let bootstrap = try await prepare(engine)
+        let encoder = try XCTUnwrap(bootstrap.capabilities.videoEncoders.first { $0.id == encoderID },
+                                   "The packaged x265 multilib must expose \(encoderID)")
+        let source = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "sample", withExtension: "mp4"))
+        let titles = try await scan(engine, url: source)
+        let title = try XCTUnwrap(titles.first)
+        let preset = try XCTUnwrap(bootstrap.presets.first)
+        var settings = try options(for: title, capabilities: bootstrap.capabilities)
+        settings["videoEncoder"] = encoder.id
+        settings["quality"] = encoder.qualityDefault
+        let completion = expectation(description: "Actual software \(encoderID) encode completes")
+        var encodeError: Error?
+        engine.encode(title: title.id, presetJSON: Data(preset.presetJSON.utf8),
+                      optionsJSON: try JSONSerialization.data(withJSONObject: settings), outputURL: output,
+                      progress: { _ in }, completion: { error in
+            encodeError = error
+            completion.fulfill()
+        })
+        await fulfillment(of: [completion], timeout: 120)
+        if let encodeError { throw encodeError }
+
+        let attributes = try FileManager.default.attributesOfItem(atPath: output.path)
+        XCTAssertGreaterThan((attributes[.size] as? NSNumber)?.intValue ?? 0, 1_024)
+        let asset = AVURLAsset(url: output)
+        let duration = try await asset.load(.duration)
+        XCTAssertEqual(CMTimeGetSeconds(duration), 1, accuracy: 0.25)
+        let tracks = try await asset.loadTracks(withMediaType: .video)
+        let video = try XCTUnwrap(tracks.first)
+        let descriptions = try await video.load(.formatDescriptions)
+        let description = try XCTUnwrap(descriptions.first)
+        XCTAssertEqual(CMFormatDescriptionGetMediaSubType(description), kCMVideoCodecType_HEVC)
+        let atoms = try XCTUnwrap(CMFormatDescriptionGetExtension(description,
+            extensionKey: kCMFormatDescriptionExtension_SampleDescriptionExtensionAtoms) as? [String: Data])
+        let configuration = try XCTUnwrap(atoms["hvcC"])
+        // ISO/IEC 14496-15 HEVCDecoderConfigurationRecord carries the actual
+        // encoded luma/chroma bit depths, so an 8-bit fallback cannot pass.
+        XCTAssertGreaterThanOrEqual(configuration.count, 23)
+        guard configuration.count >= 23 else { return }
+        XCTAssertEqual(configuration[0], 1)
+        XCTAssertEqual(Int(configuration[17] & 7) + 8, bitDepth)
+        XCTAssertEqual(Int(configuration[18] & 7) + 8, bitDepth)
+        // iOS playback support for 12-bit HEVC is independent of software
+        // encoding. Inspect the muxed track without requiring a decoder.
     }
 
     private func verifyVideoToolbox(encoderID: String, expectedCodec: FourCharCode) async throws {

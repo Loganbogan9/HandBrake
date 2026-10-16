@@ -27,6 +27,13 @@ ifeq (darwin,$(HOST.system))
     X265_8.CONFIGURE.extra += -DCMAKE_OSX_ARCHITECTURES=$(HOST.machine)
 endif
 
+ifeq (1,$(FEATURE.ios))
+    # Use the portable C++ primitives until the hand-written assembler has been
+    # validated for device/simulator target triples and Mach-O platform metadata.
+    # SVE probes are unnecessary for this path and unsupported by Apple targets.
+    X265_8.CONFIGURE.extra += -DENABLE_ASSEMBLY=OFF -DENABLE_SVE=OFF -DENABLE_SVE2=OFF -DENABLE_PIC=ON
+endif
+
 ifeq ($(GCC.O),$(filter $(GCC.O),size size-aggressive))
     X265_8.CONFIGURE.extra += -DCMAKE_BUILD_TYPE=MinSizeRel
 else

@@ -30,6 +30,12 @@ ifeq (darwin,$(HOST.system))
     X265_12.CONFIGURE.extra += -DCMAKE_OSX_ARCHITECTURES=$(HOST.machine)
 endif
 
+ifeq (1,$(FEATURE.ios))
+    # Match the portable 8-bit iOS configuration; do not mix assembler objects
+    # carrying an implicit host platform into the merged multilib archive.
+    X265_12.CONFIGURE.extra += -DENABLE_ASSEMBLY=OFF -DENABLE_SVE=OFF -DENABLE_SVE2=OFF -DENABLE_PIC=ON
+endif
+
 ifeq ($(GCC.O),$(filter $(GCC.O),size size-aggressive))
     X265_12.CONFIGURE.extra += -DCMAKE_BUILD_TYPE=MinSizeRel
 else
