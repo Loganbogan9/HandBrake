@@ -97,10 +97,11 @@ class DependencyClosureTests(unittest.TestCase):
             codec = root / "contrib/lib/libavcodec.a"
             engine.touch()
             codec.touch()
-            with patch.object(build, "run", return_value="-lavcodec -lc++ -lavcodec -lz"):
+            with patch.object(build, "run", return_value="-lavcodec -lc++ -lavcodec -lz -ldl"):
                 archives, flags = build.dependency_archives(root, {})
             self.assertEqual(archives, [engine, codec])
             self.assertIn("-lc++", flags)
+            self.assertIn("-ldl", flags)
 
 
 class X265ProfileTests(unittest.TestCase):

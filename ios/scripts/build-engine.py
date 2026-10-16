@@ -34,7 +34,7 @@ FRAMEWORKS = (
     "Foundation", "CoreFoundation", "CoreGraphics", "CoreText", "AudioToolbox",
     "VideoToolbox", "CoreMedia", "CoreVideo", "IOSurface", "Metal", "Accelerate", "QuartzCore",
 )
-SYSTEM_LIBRARIES = {"c", "c++", "m", "pthread", "iconv", "z", "bz2", "System"}
+SYSTEM_LIBRARIES = {"c", "c++", "m", "pthread", "dl", "iconv", "z", "bz2", "System"}
 
 
 @dataclass(frozen=True)
@@ -164,6 +164,7 @@ def host_compiler_wrappers(directory, sdk_root, clang, clangxx):
 
 def dependency_archives(directory, env):
     flags = shlex.split(run(["pkg-config", "--static", "--libs", *PACKAGES], env=env, capture=True))
+    print("Target dependency link flags: " + shlex.join(flags), flush=True)
     library_dir = directory / "contrib/lib"
     archives = [directory / "libhb/libhandbrake.a"]
     for flag in flags:
