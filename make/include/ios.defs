@@ -17,6 +17,11 @@ endef
 $(foreach n,HARFBUZZ LIBJPEGTURBO SVT-AV1 X265_8 X265_10 X265_12,$(eval $(call ios.CMAKE,$(n))))
 LIBJPEGTURBO.CONFIGURE.extra += -DWITH_TOOLS=OFF -DWITH_TESTS=OFF
 
+# FindFreetype needs the archive itself, not a library search directory.  Name
+# the target contrib explicitly so root-only CMake searches cannot use macOS.
+HARFBUZZ.CONFIGURE.extra += -DFREETYPE_LIBRARY:FILEPATH="$(call fn.ABSOLUTE,$(CONTRIB.build/))lib/libfreetype.a" \
+                           -DFREETYPE_LIBRARIES:FILEPATH="$(call fn.ABSOLUTE,$(CONTRIB.build/))lib/libfreetype.a"
+
 $(foreach n,LIBDAV1D LIBDVDREAD LIBDVDNAV LIBBLURAY,$(eval $(n).CONFIGURE.extra += --cross-file=$(IOS.meson_cross)))
 
 # Use the portable libvpx/x264 paths for the initial port. They retain the

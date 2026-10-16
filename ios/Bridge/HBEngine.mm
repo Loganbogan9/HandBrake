@@ -3,7 +3,9 @@
 #import "HBEngine.h"
 #import "HBJobPolicy.h"
 #include "handbrake/handbrake.h"
+extern "C" {
 #include "handbrake/ports.h"
+}
 #include <string>
 
 static NSString * const HBErrorDomain = @"org.handbrake.ios.engine";

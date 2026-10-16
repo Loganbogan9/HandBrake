@@ -126,7 +126,7 @@ private struct PresetSection: View {
     @ObservedObject var model: HandBrakeModel
 
     var body: some View {
-        Section("Preset") {
+        Section {
             Picker("Preset base", selection: Binding(
                 get: { model.selectedPresetID },
                 set: { model.applyPreset($0) }
@@ -137,6 +137,8 @@ private struct PresetSection: View {
             }
             Button("Apply selected preset") { model.applyPreset(model.selectedPresetID) }
                 .disabled(model.selectedPresetID.isEmpty)
+        } header: {
+            Text("Preset")
         } footer: {
             Text("The preset supplies additional HandBrake options. Review the controls below; they override the preset for each job.")
         }

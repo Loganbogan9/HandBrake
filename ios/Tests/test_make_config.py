@@ -1,5 +1,6 @@
 """Exercise upstream GNU make's actual iOS and macOS rule expansion."""
 from pathlib import Path
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -37,6 +38,7 @@ class MakeConfigurationTests(unittest.TestCase):
                 "$(info fribidi=$(FRIBIDI.CONFIGURE.extra))",
                 "$(info freetype=$(FREETYPE.CONFIGURE.extra))",
                 "$(info cmake=$(SVT-AV1.CONFIGURE.extra))",
+                "$(info harfbuzz=$(HARFBUZZ.CONFIGURE.extra))",
                 "$(info x265_8=$(call fn.ARGS,X265_8.CONFIGURE,$(X265_8.CONFIGURE.args)))",
                 "$(info x265_10=$(call fn.ARGS,X265_10.CONFIGURE,$(X265_10.CONFIGURE.args)))",
                 "$(info x265_12=$(call fn.ARGS,X265_12.CONFIGURE,$(X265_12.CONFIGURE.args)))",
@@ -82,6 +84,18 @@ class MakeConfigurationTests(unittest.TestCase):
         self.assertIn('LDFLAGS_FOR_BUILD=""', values["fribidi"])
         self.assertIn('CC_BUILD="/host/clang"', values["freetype"])
 
+    def test_ios_harfbuzz_uses_exact_target_freetype_archive(self):
+        for sdk, arch in (("iphoneos", "arm64"), ("iphonesimulator", "arm64"),
+                          ("iphonesimulator", "x86_64")):
+            with self.subTest(sdk=sdk, arch=arch):
+                arguments = shlex.split(self.configuration(True, sdk, arch)["harfbuzz"])
+                cache = dict(argument[2:].split("=", 1) for argument in arguments
+                             if argument.startswith("-D") and "=" in argument)
+                archive = cache["FREETYPE_LIBRARY:FILEPATH"]
+                self.assertTrue(archive.endswith("/contrib/lib/libfreetype.a"), archive)
+                self.assertEqual(cache["FREETYPE_LIBRARIES:FILEPATH"], archive)
+                self.assertNotIn("/opt/homebrew", archive)
+
     def test_cached_desktop_config_without_ios_feature_preserves_behavior(self):
         values = self.configuration(False)
         self.assertIn("-mmacosx-version-min=17.0", values["compiler"])
@@ -91,6 +105,7 @@ class MakeConfigurationTests(unittest.TestCase):
         self.assertIn(" test", values["modules"])
         self.assertNotIn("CC_FOR_BUILD=", values["fribidi"])
         self.assertNotIn("CC_BUILD=", values["freetype"])
+        self.assertNotIn("-DFREETYPE_LIBRARY:FILEPATH=", values["harfbuzz"])
 
     def test_x265_multilib_uses_target_toolchain_for_every_ios_slice(self):
         for sdk, arch in (("iphoneos", "arm64"), ("iphonesimulator", "arm64"),
