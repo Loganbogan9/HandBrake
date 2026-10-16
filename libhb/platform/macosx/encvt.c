@@ -74,7 +74,7 @@ struct hb_work_private_s
     const CMTimeRange    *timeRangeArray;
     int                   remainingPasses;
 
-    uint8 nal_length_size;
+    uint8_t nal_length_size;
 
     struct hb_vt_param
     {

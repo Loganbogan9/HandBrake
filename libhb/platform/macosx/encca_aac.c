@@ -13,7 +13,6 @@
 #include "handbrake/extradata.h"
 
 #include <AudioToolbox/AudioToolbox.h>
-#include <CoreAudio/CoreAudio.h>
 
 enum AAC_MODE { AAC_MODE_LC, AAC_MODE_HE };
 
