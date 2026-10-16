@@ -34,6 +34,8 @@ class MakeConfigurationTests(unittest.TestCase):
                 "$(info helper=$(call BIN2C.GCC.C_O,helper.o,helper.c))",
                 "$(info metal=$(LIBHB.METAL.cc) $(LIBHB.METAL.args.extra))",
                 "$(info meson=$(LIBDVDREAD.CONFIGURE.extra))",
+                "$(info fribidi=$(FRIBIDI.CONFIGURE.extra))",
+                "$(info freetype=$(FREETYPE.CONFIGURE.extra))",
                 "$(info cmake=$(SVT-AV1.CONFIGURE.extra))",
                 "$(info x265_8=$(call fn.ARGS,X265_8.CONFIGURE,$(X265_8.CONFIGURE.args)))",
                 "$(info x265_10=$(call fn.ARGS,X265_10.CONFIGURE,$(X265_10.CONFIGURE.args)))",
@@ -73,6 +75,13 @@ class MakeConfigurationTests(unittest.TestCase):
         self.assertIn("-mios-simulator-version-min=17.0", values["compiler"])
         self.assertIn("--sdk iphonesimulator metal", values["metal"])
 
+    def test_ios_generators_use_native_compiler_and_preprocessor_flags(self):
+        values = self.configuration(True)
+        self.assertIn('CC_FOR_BUILD="/host/clang"', values["fribidi"])
+        self.assertIn('CPPFLAGS_FOR_BUILD=""', values["fribidi"])
+        self.assertIn('LDFLAGS_FOR_BUILD=""', values["fribidi"])
+        self.assertIn('CC_BUILD="/host/clang"', values["freetype"])
+
     def test_cached_desktop_config_without_ios_feature_preserves_behavior(self):
         values = self.configuration(False)
         self.assertIn("-mmacosx-version-min=17.0", values["compiler"])
@@ -80,6 +89,8 @@ class MakeConfigurationTests(unittest.TestCase):
         self.assertIn("darwin-gcc.meson", values["meson"])
         self.assertIn("--target=arm64-darwin20-gcc", values["vpx"])
         self.assertIn(" test", values["modules"])
+        self.assertNotIn("CC_FOR_BUILD=", values["fribidi"])
+        self.assertNotIn("CC_BUILD=", values["freetype"])
 
     def test_x265_multilib_uses_target_toolchain_for_every_ios_slice(self):
         for sdk, arch in (("iphoneos", "arm64"), ("iphonesimulator", "arm64"),

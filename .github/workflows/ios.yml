@@ -119,5 +119,13 @@ jobs:
             ios/build/SwiftPackage.json
             ios/build/SwiftPackageGraph.json
             ios/build/engine/**/log
+            ios/build/engine/**/config.log
+            ios/build/engine/**/CMakeConfigureLog.yaml
+            ios/build/engine/**/meson-log.txt
             ios/build/engine/**/package/build-manifest.json
             ios/build/engine/**/ios-build-identity.json
+            ios/build/engine/**/contrib/lib/libx265.a
+            ios/build/engine/**/contrib/include/x265.h
+            ios/build/engine/**/contrib/include/x265_config.h
+            ios/build/engine/**/contrib/x265/**/COPYING
+            ios/build/engine/**/x265-build-manifest.json

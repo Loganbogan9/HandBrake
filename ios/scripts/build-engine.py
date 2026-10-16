@@ -368,6 +368,19 @@ def build_target(target, root, jobs, configure_only=False):
     write_text(identity_file, json.dumps(identity, indent=2) + "\n")
     if configure_only:
         return None
+    # Prove the requested x265 multilib compiles for this Apple platform before
+    # building the rest of the engine's independent contrib dependencies.
+    run(["make", "-C", directory, f"-j{jobs}", "x265.install"], env=env)
+    x265_archive = directory / "contrib/lib/libx265.a"
+    x265_objects = verify_archive_platform(x265_archive, target)
+    verify_x265_multilib(x265_archive, target)
+    write_text(directory / "x265-build-manifest.json", json.dumps({**identity,
+        "archive": x265_archive.relative_to(directory).as_posix(),
+        "verified_objects": x265_objects,
+        "verified_api_definitions_bit_depths": list(X265_BIT_DEPTHS),
+        "validation": "Mach-O platform/architecture and static API definitions; runtime encoding not executed",
+    }, indent=2) + "\n")
+    print(f"Verified {x265_objects} {target.identifier} x265 objects and 8/10/12-bit APIs", flush=True)
     # libhb has explicit contrib install prerequisites. Its Metal shaders have a
     # native bin2c prerequisite, avoiding a target helper execution on the Mac.
     run(["make", "-C", directory, f"-j{jobs}", "libhb.build"], env=env)

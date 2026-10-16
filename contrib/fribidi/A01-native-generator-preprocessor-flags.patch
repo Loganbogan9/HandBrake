@@ -1,0 +1,14 @@
+The table generators run on the build machine.  As with CC/CFLAGS/LDFLAGS,
+use build-machine CPPFLAGS rather than target SDK/deployment flags.
+
+diff --git a/gen.tab/Makefile.am b/gen.tab/Makefile.am
+--- a/gen.tab/Makefile.am
++++ b/gen.tab/Makefile.am
+@@ -26,6 +26,7 @@
+ CFLAGS_FOR_BUILD += -DHAVE_CONFIG_H -I$(top_builddir) -I$(top_builddir)/lib -I$(top_srcdir)/lib
+ CC = $(CC_FOR_BUILD)
+ CFLAGS = $(CFLAGS_FOR_BUILD)
++CPPFLAGS = $(CPPFLAGS_FOR_BUILD)
+ LDFLAGS = $(LDFLAGS_FOR_BUILD)
+ 
+ CLEANFILES = $(EXTRA_PROGRAMS)

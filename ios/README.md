@@ -154,8 +154,16 @@ On the Windows/WSL implementation host, final portable validation passed:
 (VideoToolbox error/ownership and AddressSanitizer resume races), 22 C job-policy
 checks, grammar parsing of all 10 Swift files, and `git diff --check`.
 FFprobe confirmed the original test fixture is one-second 160 × 90 H.264/AAC
-at 24 fps. The eight native engine XCTests and five model XCTests remain
+at 24 fps. The eleven native engine XCTests and five model XCTests remain
 unexecuted. No encoded iOS output or engine binary was produced here.
+
+The x265 integration subsequently passed all 27 portable checks. The exact
+pinned source with HandBrake's patches also compiled into a combined static
+8/10/12-bit library on Linux; each API encoded a short HEVC output at the
+requested bit depth, and FFmpeg decoded all three without errors. CMake 4.4.4
+configuration also passed. These host checks do not establish iOS
+binary or runtime compatibility; the dedicated Mac CI build validates those
+separately.
 
 The outstanding blocker is access to full Xcode/iOS SDKs and a physical Apple
 device. Compilation, any resulting SDK/linker repairs, simulator integration

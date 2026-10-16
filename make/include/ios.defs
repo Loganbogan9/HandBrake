@@ -3,6 +3,12 @@
 # invocations; CMake/Meson also need an explicit cross-platform description.
 LIBHB.GCC.args.extra += -fblocks -fno-objc-arc
 
+# These executables generate source/API tables during the build and must run on
+# macOS.  FreeType calls this compiler CC_BUILD; FriBidi uses CC_FOR_BUILD.
+# IOS.host_cc is a wrapper with the native SDK and no iOS deployment environment.
+FRIBIDI.CONFIGURE.extra += CC_FOR_BUILD="$(IOS.host_cc)" CPPFLAGS_FOR_BUILD="" LDFLAGS_FOR_BUILD=""
+FREETYPE.CONFIGURE.extra += CC_BUILD="$(IOS.host_cc)"
+
 define ios.CMAKE
     $(1).CONFIGURE.host =
     $(1).CONFIGURE.build =
