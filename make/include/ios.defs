@@ -15,7 +15,8 @@ $(foreach n,LIBDAV1D LIBDVDREAD LIBDVDNAV LIBBLURAY,$(eval $(n).CONFIGURE.extra 
 
 # Use the portable libvpx/x264 paths for the initial port. They retain the
 # software codecs without libvpx's macOS SDK auto-detection and host executables.
-LIBVPX.CONFIGURE.extra += --target=generic-gnu --disable-asm --enable-pic
+# generic-gnu selects portable primitives; libvpx has no --disable-asm option.
+LIBVPX.CONFIGURE.extra += --target=generic-gnu --enable-pic
 X264.CONFIGURE.extra += --disable-asm --enable-pic
 
 # FFmpeg's Darwin target is also correct for iOS. Disable probes for frameworks
